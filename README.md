@@ -1,4 +1,6 @@
 # Alpyca
+[![Build Status](https://travis-ci.org/arturmiller/alpyca.svg?branch=master)](https://travis-ci.org/arturmiller/alpyca)
+
 Developing robots is a hard task. ROS makes it simpler, but it is still not as easy as it could be. The main idea is to make robot development with ROS as easy as possible. It is a library with an interface completely in Python.
 
 ## Python instead of C++
