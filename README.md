@@ -13,4 +13,4 @@ The documentation of many ROS libraries could be improved, even for standard lib
 TODO
 
 ## License
-Alpyca is open-sourced under the MIT license. See the [LICENSE](https://github.com/arturmiller/alpyca/blob/master/README.md) file for details.
+Alpyca is open-sourced under the MIT license. See the [LICENSE](https://github.com/arturmiller/alpyca/blob/master/LICENSE) file for details.
