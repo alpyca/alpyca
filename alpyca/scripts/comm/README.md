@@ -1,4 +1,4 @@
-# ros_pythonic
+# alpyca_comm
 
 A pythonic wrapper to simplify the communication in ROS.
 
@@ -9,7 +9,7 @@ The process of setting up the communication in ROS can be hard for a beginner. T
 Lets subscribe and publish something as an example.
 
 ```python
-from ros_pythonic import Node
+from alpyca_comm import Node
 
 # create a node instance
 node = Node()
