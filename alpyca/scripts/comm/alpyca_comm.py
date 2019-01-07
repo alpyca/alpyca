@@ -14,7 +14,7 @@ class Node(object):
         self.topic_subs = []
 
     @staticmethod
-    def _import_from_str(import_str):
+    def _import_from_str(import_str, asterisk=False):
         """ Import the given string.
         
         Parameters
@@ -91,6 +91,62 @@ class Node(object):
                 pub.publish(cb_ret)
             return wrapper    
         return cb_decorator    
+
+    def service_call(self, srv_name, srv_type):
+        """ Calls the given service that has the given service type.
+        
+        Parameters
+        ----------
+        srv_name : str
+            service to call, e.g. /test_srv/service
+        srv_type : str
+            data type of the service in an importable form, 
+            e.g. 'my_service.srv.ServiceType'
+        
+        Returns
+        -------
+        srv_type response
+            return the response of the service that was called
+        """
+        def cb_decorator(callback):
+            @functools.wraps(callback)
+            def wrapper(*args, **kwargs):
+                rospy.wait_for_service(srv_name)
+                try:
+                    data = args[0]
+                    imported_dtype = self._import_from_str(srv_type)
+                    srv_call = rospy.ServiceProxy(srv_name, imported_dtype)
+                    srv_response = srv_call(data)
+                    return callback(srv_response)
+                except rospy.ServiceException as srv_err:
+                    rospy.logerr("Service call failed: {}".format(srv_err))
+                except IndexError:
+                    rospy.logerr('Service call argument needs to be type: {}'\
+                    .format(srv_type))
+            return wrapper    
+        return cb_decorator 
+
+    def service_provide(self, srv_name, srv_type):
+        """ Provides a topic with the given name and service type.
+        
+        Parameters
+        ----------
+        srv_name : str
+            service to provide, e.g. /test_srv/service
+        srv_type : str
+            data type of the service in an importable form, 
+            e.g. 'my_service.srv.ServiceType'
+        
+        Returns
+        -------
+        function
+            callback of the function to call when the provided
+            service gets called
+        """
+        def wrapper(callback):
+            imported_dtype = self._import_from_str(srv_type)
+            rospy.Service(srv_name, imported_dtype, callback)
+        return wrapper
 
     def main(self, rate=10):
         """ Optional main function to start to execute the
