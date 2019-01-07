@@ -6,7 +6,7 @@ A pythonic wrapper to simplify the communication in ROS.
 The process of setting up the communication in ROS can be hard for a beginner. To simplify this process and also provide a more pythonic interface for ROS this project provides a flask like approach to set up the communication in ROS.
 
 ## Example usage
-Lets subscribe and publish something as an example.
+Lets subscribe and publish something to a topic as an example.
 
 ```python
 from alpyca_comm import Node
@@ -42,4 +42,22 @@ def main():
 # starts the node and the communication
 if __name__ == "__main__":
     node.run()
+```
+
+The following lines are an example if you want to provide some service or just call a provided service.
+
+```python
+# use the service_provide decorator to provide a service. In this
+# case the service is provided on /test_srv/service and has the messages
+# of the service are from the type my_service.srv.ServiceType
+@node.service_provide('/test_srv/service', 'my_service.srv.ServiceType')
+def srv_prov(data):
+    return 'service call with given data included {}'.format(data)
+
+# use the service_call decorator to call a provided server. In this 
+# example the service '/test_srv/service' is called where 'my_service.srv.ServiceType'
+# is the type of the service messages. The response is stored in the 'response'
+@node.service_call('/test_srv/service', 'my_service.srv.ServiceType')
+def srv_call(response):
+    return 'service response: {}'.format(response)
 ```
