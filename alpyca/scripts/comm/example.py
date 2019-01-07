@@ -16,10 +16,19 @@ def pub_given_data(data):
 def pub_data_intern():
     return 'intern random generated data'
 
+@node.service_provide('/test_srv/service', 'my_service.srv.ServiceType')
+def srv_prov(data):
+    return 'service call with given data included {}'.format(data)
+
+@node.service_call('/test_srv/service', 'my_service.srv.ServiceType')
+def srv_call(response):
+    return 'service response: {}'.format(response)
+
 @node.main()
 def main():
     pub_given_data('given test data')
     pub_data_intern()
+    print(srv_call('service_data'))
 
 
 if __name__ == "__main__":
