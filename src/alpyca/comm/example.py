@@ -1,4 +1,4 @@
-from alpyca_comm import Node
+from alpyca.comm import Node
 
 
 node = Node()
@@ -16,11 +16,11 @@ def pub_given_data(data):
 def pub_data_intern():
     return 'intern random generated data'
 
-@node.service_provide('/test_srv/service', 'my_service.srv.ServiceType')
+@node.service_provide('/test_srv/service', 'alpyca.srv.ExampleSrv')
 def srv_prov(data):
     return 'service call with given data included {}'.format(data)
 
-@node.service_call('/test_srv/service', 'my_service.srv.ServiceType')
+@node.service_call('/test_srv/service', 'alpyca.srv.ExampleSrv')
 def srv_call(response):
     return 'service response: {}'.format(response)
 
@@ -28,7 +28,7 @@ def srv_call(response):
 def main():
     pub_given_data('given test data')
     pub_data_intern()
-    print(srv_call('service_data'))
+    # print(srv_call('service_data'))
 
 
 if __name__ == "__main__":
