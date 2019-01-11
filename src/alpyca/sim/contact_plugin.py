@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-class CustomPlugin:
+class ContactPlugin:
 
     def __init__(self):
         self.sensor = None

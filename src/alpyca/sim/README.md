@@ -10,7 +10,7 @@ It would be much nicer to write plugins in Python. This is what alpyca/sim is fo
 You can write a contact sensor plugin, exactly as in the [Gazebo tutorials](http://gazebosim.org/tutorials?tut=contact_sensor), but completely in Python. 
 
 ```python
-class CustomPlugin:
+class ContactPlugin:
 
     def __init__(self):
         self.sensor = None

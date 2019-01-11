@@ -23,8 +23,8 @@ void PluginRunner::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
     
   py_sensor_module = py::module::import("py_contact_sensor");
   py_sensor_class = py_sensor_module.attr("PyContactSensor");
-  custom_plugin_module = py::module::import("alpyca.sim.custom_plugin");
-  plugin_class = custom_plugin_module.attr("CustomPlugin");
+  custom_plugin_module = py::module::import("alpyca.sim.contact_plugin");
+  plugin_class = custom_plugin_module.attr("ContactPlugin");
 
   plugin = plugin_class();
   load_func = plugin.attr("Load");
