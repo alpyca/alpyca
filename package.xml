@@ -5,17 +5,23 @@
   <description>The main idea of Alpyca is to make robot development with ROS as easy as possible.</description>
 
   <maintainer email="boehle@gmail.com">Sebastian Boehle</maintainer>
-  <author email="boehle@gmail.com">Artur Miller</author>
+  <author email="amiller89@gmx.de">Artur Miller</author>
   <author email="boehle@gmail.com">Sebastian Boehle</author>
   <license>MIT</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>pybind11_catkin</build_depend>
+  <build_depend>gazebo_ros</build_depend>
+  <build_depend>roscpp</build_depend>
 
   <run_depend>message_runtime</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>roslaunch</run_depend>
   <run_depend>std_msgs</run_depend>
-  
+  <run_depend>pybind11_catkin</run_depend>
+  <run_depend>gazebo_ros</run_depend>
+  <run_depend>roscpp</run_depend>
+
 </package>
