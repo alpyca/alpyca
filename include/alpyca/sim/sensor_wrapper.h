@@ -1,3 +1,8 @@
+/*
+ Wrapper for Gazebo Sensor.	
+ */
+
+
 #ifndef _SENSOR_WRAPPER_
 #define _SENSOR_WRAPPER_
 
@@ -31,6 +36,7 @@ namespace gazebo
 
         void OnUpdate()
         {
+		    // The gil has to be acquired by this thread to make the Python function not block.
             py::gil_scoped_release release;
             {
                 py::gil_scoped_acquire acquire;

@@ -1,3 +1,7 @@
+/*
+ Wrapper for Gazebo Contact and Contacts. "Repeated" proto message are converted to vector.	
+ */
+
 #ifndef _CONTACT_SENSOR_WRAPPER_H_
 #define _CONTACT_SENSOR_WRAPPER_H_
 

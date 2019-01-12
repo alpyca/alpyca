@@ -2,17 +2,29 @@
 
 
 class ContactPlugin:
+    """ A Gazebo ContactPlugin written completely in Python """
 
     def __init__(self):
         self.sensor = None
 
     def Load(self, sensor):
+        """ Load the sensor plugin
+        
+        Parameters
+        ----------
+        sensor : PySensor
+            The sensor that loaded this plugin
+        """
+
         self.sensor = sensor
 
         sensor.ConnectUpdated(self.OnUpdate)
         sensor.SetActive(True)
 
     def OnUpdate(self):
+        """ Everytime the sensor is updated, this function is called.
+		It receives the sensor's update signal.
+        """
 
         for contact in self.sensor.Contacts():
             print("Collision between[{}] and [{}]".format(contact.collision1, contact.collision2))

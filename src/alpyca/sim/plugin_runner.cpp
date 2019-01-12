@@ -1,3 +1,7 @@
+/*
+ This class runs Python plugins for Gazebo.
+ */
+
 #include <iostream>
 #include <ros/console.h>
 #include "alpyca/sim/plugin_runner.h"
@@ -17,10 +21,14 @@ PluginRunner::~PluginRunner()
 
 void PluginRunner::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
 {
+  /*
+   Wrap the call of the Load function of the Python plugin.
+  */
   sensor_wrapper = new ContactSensorWrapper(_sensor);
+  // Start the interpreter and keep it alive
+  guard = new py::scoped_interpreter();
   
-  guard = new py::scoped_interpreter(); // start the interpreter and keep it alive
-    
+  // Import PyContactSensor to make type-casting to the pybind11 version of the contact sensor possible.
   py_sensor_module = py::module::import("py_contact_sensor");
   py_sensor_class = py_sensor_module.attr("PyContactSensor");
   custom_plugin_module = py::module::import("alpyca.sim.contact_plugin");

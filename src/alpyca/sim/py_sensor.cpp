@@ -1,3 +1,7 @@
+/*
+ A Pybind11 wrapper for SensorWrapper.
+ */
+
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
 #include "alpyca/sim/sensor_wrapper.h"

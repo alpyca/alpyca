@@ -1,3 +1,7 @@
+/*
+ Pybind11 wrappers for ContactSensorWrapper, Vector3d, ContactWrapper and ContactsWrapper.
+ */
+ 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
