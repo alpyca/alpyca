@@ -7,7 +7,7 @@ writing plugins keeps being a hard task. Error messages are often cryptic, debug
 It would be much nicer to write plugins in Python. This is what alpyca/sim is for.  
 
 ## Example usage
-You can write a contact sensor plugin, exactly as in the [Gazebo tutorials](http://gazebosim.org/tutorials?tut=contact_sensor), but completely in Python. 
+You can write a contact sensor plugin, exactly as in the [Gazebo tutorials](http://gazebosim.org/tutorials?tut=contact_sensor), but completely in Python. An example can be found in [contact_plugin.py](contact_plugin.py).
 
 ```python
 class ContactPlugin:
@@ -30,4 +30,10 @@ class ContactPlugin:
                 print("Normal: {} {} {}".format(normal.x, normal.y, normal.z))
                 print("Depth: {}".format(depth))
 
+```
+
+Run this plugin with:
+```bash
+cd <alpyca_path>/worlds
+gazebo contact.world
 ```
