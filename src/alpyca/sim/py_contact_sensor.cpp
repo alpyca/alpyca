@@ -23,14 +23,49 @@ namespace gazebo
         .def_property_readonly("y", &gazebo::msgs::Vector3d::y)
         .def_property_readonly("z", &gazebo::msgs::Vector3d::z);
 
-        py::class_<ContactWrapper>(m, "PyContact")
-        .def_property_readonly("collision1", &ContactWrapper::collision1)
-        .def_property_readonly("collision2", &ContactWrapper::collision2)
-        .def_property_readonly("position", &ContactWrapper::position)
-        .def_property_readonly("normal", &ContactWrapper::normal)
-        .def_property_readonly("depth", &ContactWrapper::depth);
+        py::class_<msgs::Contact>(m, "PyContact")
+        .def_property_readonly("collision1", &msgs::Contact::collision1)
+        .def_property_readonly("collision2", &msgs::Contact::collision2)
+        .def_property_readonly("depth", [](msgs::Contact *contact) -> std::vector<double>
+        {
+            std::vector<double> dep = {};
+            for (unsigned int i = 0; i < contact->position_size(); ++i)
+            {
+                dep.push_back(contact->depth(i));
+            }
 
-        py::class_<ContactsWrapper>(m, "PyContacts")
-        .def("__getitem__", &ContactsWrapper::contact);
+            return dep;
+        })
+        .def_property_readonly("position", [](msgs::Contact *contact) -> std::vector<gazebo::msgs::Vector3d>
+        {
+            std::vector<gazebo::msgs::Vector3d> pos = {};
+            for (unsigned int i = 0; i < contact->position_size(); ++i)
+            {
+                pos.push_back(contact->position(i));
+            }
+
+            return pos;
+        })
+        .def_property_readonly("normal", [](msgs::Contact *contact) -> std::vector<gazebo::msgs::Vector3d>
+        {
+            std::vector<gazebo::msgs::Vector3d> norm = {};
+            for (unsigned int i = 0; i < contact->position_size(); ++i)
+            {
+                norm.push_back(contact->normal(i));
+            }
+
+            return norm;
+        });
+
+        py::class_<msgs::Contacts>(m, "PyContacts")
+        .def("__getitem__", [](msgs::Contacts *contacts, int index) -> msgs::Contact
+        {
+            if(index >= contacts->contact_size())
+            {
+                throw py::index_error();
+            }
+
+            return contacts->contact(index);
+        });
     }
 }
