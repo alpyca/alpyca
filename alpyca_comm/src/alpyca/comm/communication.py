@@ -1,8 +1,12 @@
 from __future__ import division, absolute_import, print_function
 
+import sys
 import uuid
 import rospy
+import inspect
 import functools
+
+import actionlib
 
 __all__ = ['Node']
 
@@ -12,6 +16,9 @@ class Node(object):
 
     def __init__(self):
         self.topic_subs = []
+        self.action_refs = {}
+        self.action_results = {}
+        self.action_mapper = {}
 
     @staticmethod
     def _import_from_str(import_str, asterisk=False):
@@ -148,6 +155,214 @@ class Node(object):
             rospy.Service(srv_name, imported_dtype, callback)
         return wrapper
 
+    @staticmethod
+    def _get_action_msg_import(act_import, act_type):
+        """ Converts the basic action dtype to an importable format.
+
+        After the action gets generated of catkin the import changes, e.g.
+        alpyca.action.Example -> alpyca.msg.ExampleAction
+        
+        Parameters
+        ----------
+        act_import : str
+            Datatype of the action, e.g. 'alpyca.action.Example'
+        act_type : str
+            Type of the action to make importable, e.g. Action, Feedback, Goal..
+        
+        Returns
+        -------
+        str
+            Importable action msg, alpyca.msg.ExampleAction
+        """
+        base_pkg, action_name = act_import.rsplit('.', 1)
+        base_pkg_path, _ = base_pkg.rsplit('.', 1)
+        return '.'.join([base_pkg_path, 'msg', action_name + act_type])
+
+    @staticmethod
+    def _get_attribute_name(class_of_attr):
+        """ Gets the attribute name of the given class.
+
+        This is needed to get the attribute names for Goal, Feedback
+        and Result of the action.
+        
+        Parameters
+        ----------
+        class_of_attr : cls
+            Class to get the attribute from.
+        
+        Returns
+        -------
+        str
+            Name of the searched attribute.
+        """
+        attributes_of_class = [i for i in dir(class_of_attr) if not inspect.ismethod(i)]
+        attr_wo_serials = [i for i in attributes_of_class if 'serial' not in i]
+        return [i for i in attr_wo_serials if '_' not in i][0]
+
+    @staticmethod
+    def _set_attr_of_action(attr, attr_class, val):
+        """ Sets the attribute of a action with the given value.
+
+        This is needed b/c the attributes of the action (Goal, Result, ..) can
+        have different names and types which have to be determined an set differntly.
+        
+        Parameters
+        ----------
+        attr : str
+            Name of the class attribute to set.
+        attr_class : cls
+            Class the attribute belongs to
+        val : dtype of value to set
+            Value to set the attribute to.
+        """
+        attr_ref = getattr(attr_class, attr)
+        if isinstance(attr_ref, int) or isinstance(attr_ref, str):
+            attr_ref = val
+        else:
+            attr_ref.append(val)
+
+    @staticmethod
+    def _get_action_dtypes(act_type):
+        """ Determines the three types (Goal, Feedback, Result) of an 
+        action in a callable format.
+        
+        Parameters
+        ----------
+        act_type : act_type : str
+            Datatype of the action, e.g. 'alpyca.action.Example'
+        
+        Returns
+        -------
+        (type, type, type)
+            Callable type of Goal, Feedback and Result of the action
+        """
+        action_msg_import = Node._get_action_msg_import(act_type, 'Action')
+        action_dtype = Node._import_from_str(action_msg_import)
+
+        result_msg_import = Node._get_action_msg_import(act_type, 'Result')
+        result_dtype = Node._import_from_str(result_msg_import)
+
+        feedback_msg_import = Node._get_action_msg_import(act_type, 'Feedback')
+        feedback_dtype = Node._import_from_str(feedback_msg_import)
+        return action_dtype, result_dtype, feedback_dtype
+
+
+    def start_action_server(self, act_name, act_type):
+        """ Sets everything up to enable starting of the action server.
+        
+        Parameters
+        ----------
+        act_name : str
+            Topic to access the action, e.g. '/test_act/name'
+        act_type : str
+            Datatype of the action, e.g. 'alpyca.action.Example'
+        """
+        def wrapper(callback):
+            # get data types of action, result and feedback
+            act_dtype, res_dtype, feedk_dtype = self._get_action_dtypes(act_type)
+            # create action server
+            act_srv = actionlib.SimpleActionServer(act_name,
+                                                   act_dtype, 
+                                                   execute_cb=callback, 
+                                                   auto_start = False)
+            # create result and feedback references
+            result_ref = res_dtype()
+            feedb_ref = feedk_dtype()
+            
+            # map action client <-> action server
+            self.action_mapper[callback.__name__] = act_name
+            # save references for further access
+            self.action_refs[act_name] = (act_srv, result_ref, feedb_ref)
+        return wrapper
+
+    def set_action_result(self, result):
+        """ Sets the result for the action server that gets decorated.
+        
+        Parameters
+        ----------
+        result : dtype of the action
+            Result to set for the action
+        """
+        act_method_name = sys._getframe().f_back.f_code.co_name
+        act_topic = self.action_mapper[act_method_name]
+        act_srv, result_ref, _ = self.action_refs[act_topic]
+        result_attr = self._get_attribute_name(result_ref)
+        self._set_attr_of_action(result_attr, result_ref, result)
+        self.action_results[act_topic] = result
+        act_srv.set_succeeded(result_ref)
+
+    def send_action_feedback(self, feedback):
+        """ Sends a feed for the action server that gets decorated.
+        
+        Parameters
+        ----------
+        feedback : dtype of the feedback
+            Feedback to send
+        """
+        act_method_name = sys._getframe().f_back.f_code.co_name
+        act_topic = self.action_mapper[act_method_name]
+        act_srv, _, feedb_ref = self.action_refs[act_topic]
+        feedb_attr = self._get_attribute_name(feedb_ref)
+        self._set_attr_of_action(feedb_attr, feedb_ref, feedback)
+        act_srv.publish_feedback(feedb_ref)
+
+    def get_action_result(self):
+        """ Gets the action result for the decorated action client.
+        
+        Returns
+        -------
+        dtype of the result
+            Result of the action that gets called from 
+            the decorated action client.
+        """
+        act_method_name = sys._getframe().f_back.f_code.co_name
+        return self.action_results[self.action_mapper[act_method_name]]
+
+    def action_client(self, act_name, act_type, feedback_cback=None):
+        """ Sets everythin up a action client.
+        
+        Parameters
+        ----------
+        act_name : str
+            Topic to access the action, e.g. '/test_act/name'
+        act_type : str
+            Datatype of the action, e.g. 'alpyca.action.Example'
+        feedback_cback : function, optional
+            Callback of the method that gets called in case of a feedback 
+            from the action server (the default is None, which means no feedback
+            method gets called).
+        """
+        def cb_decorator(callback):
+            self.action_mapper[callback.__name__] = act_name
+            @functools.wraps(callback)
+            def wrapper(*args, **kwargs):
+                goal_to_reach = args[0]
+                action_msg_import = self._get_action_msg_import(act_type, 'Action')
+                action_dtype = self._import_from_str(action_msg_import)
+                
+                # Creates the action client .
+                client = actionlib.SimpleActionClient(act_name, action_dtype)
+
+                # Waits until the action server has started up and started
+                # listening for goals.
+                client.wait_for_server()
+
+                # Creates a goal to send to the action server.
+                goal_msg_import = self._get_action_msg_import(act_type, 'Goal')
+                goal_dtype = self._import_from_str(goal_msg_import)
+                goal = goal_dtype(order=goal_to_reach)
+
+                # Sends the goal to the action server.
+                client.send_goal(goal, feedback_cb=feedback_cback)
+
+                # Waits for the server to finish performing the action.
+                client.wait_for_result()
+
+                # Executes the decorated method and returns the result
+                return callback(*args, **kwargs)
+            return wrapper
+        return cb_decorator
+
     def main(self, rate=10):
         """ Optional main function to start to execute the
         decorated function perodically with the given rate.
@@ -190,6 +405,9 @@ class Node(object):
         for topic, dtype, cb in self.topic_subs:
             rospy.Subscriber(topic, dtype, cb)
             rospy.loginfo('subscribed to: {}'.format(topic))
+
+        for key in self.action_refs.keys():
+            self.action_refs[key][0].start()
 
         try:
             # only exec main perodically if there is something to do
