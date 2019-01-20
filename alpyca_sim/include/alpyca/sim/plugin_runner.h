@@ -26,6 +26,7 @@ namespace gazebo
     private:
         py::object plugin;
         py::object py_sensor_class;
+        py::object py_msgs;
         py::object plugin_class;
         py::object load_func;
         py::module py_sensor_module;

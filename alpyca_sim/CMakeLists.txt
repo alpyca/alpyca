@@ -33,6 +33,7 @@ catkin_package(
 
 pybind_add_module(py_sensor MODULE src/alpyca/sim/py_sensor.cpp)
 pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
+pybind_add_module(msgs MODULE src/alpyca/sim/msgs.cpp)
 
 add_library(plugin_runner SHARED src/alpyca/sim/plugin_runner.cpp)
 target_link_libraries(plugin_runner ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PYTHON_LIBRARIES})
