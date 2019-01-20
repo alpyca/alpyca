@@ -1,66 +1,61 @@
-/*
- Pybind11 wrappers for ContactSensorWrapper, Vector3d, ContactWrapper and ContactsWrapper.
- */
- 
+
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <gazebo/gazebo.hh>
+
+#include "alpyca/sim/repeated.h"
 
 
 namespace py = pybind11;
 
 namespace gazebo
 {
-    PYBIND11_MODULE(msgs, m) {
-        py::class_<gazebo::msgs::Vector3d>(m, "Vector3d")
-        .def_property_readonly("x", &gazebo::msgs::Vector3d::x)
-        .def_property_readonly("y", &gazebo::msgs::Vector3d::y)
-        .def_property_readonly("z", &gazebo::msgs::Vector3d::z);
+    namespace msgs
+    {
+        PYBIND11_MODULE(msgs, m) {
+            py::class_<Repeated<double>>(m, "Repeated_double")
+            .def("__getitem__", &Repeated<double>::getitem);
 
-        py::class_<msgs::Contact>(m, "Contact")
-        .def_property_readonly("collision1", &msgs::Contact::collision1)
-        .def_property_readonly("collision2", &msgs::Contact::collision2)
-        .def_property_readonly("depth", [](msgs::Contact *contact) -> std::vector<double>
-        {
-            std::vector<double> dep = {};
-            for (unsigned int i = 0; i < contact->position_size(); ++i)
+
+            py::class_<Vector3d>(m, "Vector3d")
+            .def_property_readonly("x", &Vector3d::x)
+            .def_property_readonly("y", &Vector3d::y)
+            .def_property_readonly("z", &Vector3d::z);
+
+            py::class_<Repeated<Vector3d>>(m, "Repeated_Vector3d")
+            .def("__getitem__", &Repeated<Vector3d>::getitem);
+
+
+            py::class_<Contact>(m, "Contact")
+            .def_property_readonly("collision1", &Contact::collision1)
+            .def_property_readonly("collision2", &Contact::collision2)
+            .def_property_readonly("depth", [](Contact *obj) -> Repeated<double>
             {
-                dep.push_back(contact->depth(i));
-            }
-
-            return dep;
-        })
-        .def_property_readonly("position", [](msgs::Contact *contact) -> std::vector<gazebo::msgs::Vector3d>
-        {
-            std::vector<gazebo::msgs::Vector3d> pos = {};
-            for (unsigned int i = 0; i < contact->position_size(); ++i)
+                std::function<double(int)> func = [obj](int index) { return obj->depth(index); };
+                return Repeated<double>(func, obj->depth_size());
+            })
+            .def_property_readonly("position", [](Contact *obj) -> Repeated<Vector3d>
             {
-                pos.push_back(contact->position(i));
-            }
-
-            return pos;
-        })
-        .def_property_readonly("normal", [](msgs::Contact *contact) -> std::vector<gazebo::msgs::Vector3d>
-        {
-            std::vector<gazebo::msgs::Vector3d> norm = {};
-            for (unsigned int i = 0; i < contact->position_size(); ++i)
+                std::function<Vector3d(int)> func = [obj](int index) { return obj->position(index); };
+                return Repeated<Vector3d>(func, obj->position_size());
+            })
+            .def_property_readonly("normal", [](Contact *obj) -> Repeated<Vector3d>
             {
-                norm.push_back(contact->normal(i));
-            }
+                std::function<Vector3d(int)> func = [obj](int index) { return obj->normal(index); };
+                return Repeated<Vector3d>(func, obj->normal_size());
+            });
 
-            return norm;
-        });
+            py::class_<Repeated<Contact>>(m, "Repeated_Contact")
+            .def("__getitem__", &Repeated<Contact>::getitem);
 
-        py::class_<msgs::Contacts>(m, "Contacts")
-        .def("__getitem__", [](msgs::Contacts *contacts, int index) -> msgs::Contact
-        {
-            if(index >= contacts->contact_size())
+
+            py::class_<Contacts>(m, "Contacts")
+            .def_property_readonly("contact", [](Contacts *obj) -> Repeated<Contact>
             {
-                throw py::index_error();
-            }
-
-            return contacts->contact(index);
-        });
+                std::function<Contact(int)> func = [obj](int index) { return obj->contact(index); };
+                return Repeated<Contact>(func, obj->contact_size());
+            });
+        }
     }
 }

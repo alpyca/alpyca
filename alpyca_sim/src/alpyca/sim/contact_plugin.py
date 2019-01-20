@@ -25,8 +25,9 @@ class ContactPlugin:
         """ Everytime the sensor is updated, this function is called.
 		It receives the sensor's update signal.
         """
-
-        for contact in self.sensor.Contacts():
+      
+        contacts = self.sensor.Contacts
+        for contact in contacts.contact: # why does self.sensor.Contacts.contact not work?
             print("Collision between[{}] and [{}]".format(contact.collision1, contact.collision2))
 
             for (position, normal, depth) in zip(contact.position, contact.normal, contact.depth):

@@ -1,5 +1,5 @@
 /*
- Pybind11 wrappers for ContactSensorWrapper, Vector3d, ContactWrapper and ContactsWrapper.
+ Pybind11 wrappers for ContactSensorWrapper
  */
  
 #include <pybind11/pybind11.h>
@@ -14,7 +14,7 @@ namespace gazebo
 {
     PYBIND11_MODULE(py_contact_sensor, m) {
         py::class_<ContactSensorWrapper>(m, "PyContactSensor")
-        .def("Contacts", &ContactSensorWrapper::Contacts)
+        .def_property_readonly("Contacts", &ContactSensorWrapper::Contacts)
         .def("SetActive", &SensorWrapper::SetActive)
         .def("ConnectUpdated", &SensorWrapper::ConnectUpdated);
     }
