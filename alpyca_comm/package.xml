@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>alpyca</name>
+  <name>alpyca_comm</name>
   <version>0.0.1</version>
   <description>The main idea of Alpyca is to make robot development with ROS as easy as possible.</description>
 
