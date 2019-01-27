@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(alpyca)
+project(alpyca_comm)
 
 find_package(PythonLibs REQUIRED)
 
