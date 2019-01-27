@@ -1,5 +1,5 @@
 # Alpyca
-[![Build Status](https://travis-ci.org/alpyca/alpyca.svg?branch=master)](https://travis-ci.org/arturmiller/alpyca) [![Documentation Status](https://readthedocs.org/projects/alpyca/badge/?version=latest)](https://alpyca.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.org/alpyca/alpyca.svg?branch=master)](https://travis-ci.org/alpyca/alpyca) [![Documentation Status](https://readthedocs.org/projects/alpyca/badge/?version=latest)](https://alpyca.readthedocs.io/en/latest/?badge=latest)
 
 Developing robots is a hard task. ROS makes it simpler, but it is still not as easy as it could be. The main idea of Alpyca (pronunciation: /ælˈpaɪkə/) is to make robot development with ROS as easy as possible. It is a library with an interface completely in Python.
 
