@@ -31,9 +31,16 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}  
 )
 
+set(pybind_msgs "${CMAKE_CURRENT_BINARY_DIR}/proto/msgs.cpp")
+add_custom_command(
+    OUTPUT ${pybind_msgs}
+    COMMAND python deps/proto_to_pybind11.py /usr/include/gazebo-7/gazebo/msgs/proto ${pybind_msgs}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 pybind_add_module(py_sensor MODULE src/alpyca/sim/py_sensor.cpp)
 pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
-pybind_add_module(msgs MODULE src/alpyca/sim/msgs.cpp)
+pybind_add_module(msgs MODULE ${pybind_msgs})
 
 add_library(plugin_runner SHARED src/alpyca/sim/plugin_runner.cpp)
 target_link_libraries(plugin_runner ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PYTHON_LIBRARIES})
