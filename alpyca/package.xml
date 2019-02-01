@@ -12,5 +12,9 @@
   <buildtool_depend>catkin</buildtool_depend>
   <run_depend>alpyca_comm</run_depend>
   <run_depend>alpyca_sim</run_depend>
+  
+  <export>
+    <metapackage/>
+  </export>
 
 </package>
