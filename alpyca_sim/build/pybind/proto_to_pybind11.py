@@ -7,6 +7,7 @@ import inspect
 
 from pybind_file import PybindFile
 from pybind_block import PybindBlock
+from pybind_class_writer import PybindClassWriter
 
 
 def get_args():
@@ -57,8 +58,11 @@ def proto_to_pybind11(args):
                                     attr = getattr(clsmember, attr_name)
                                     if type(attr) == type(clsmember):
                                         concat_name = '::'.join([clsname, attr_name])
-                                        writer.add_class(concat_name, attr)
-                                writer.add_class(clsname, clsmember)
+                                        class_writer = PybindClassWriter(writer, concat_name, attr)
+                                        class_writer.write()
+
+                                class_writer = PybindClassWriter(writer, clsname, clsmember)
+                                class_writer.write()
                                 
                         create_module(modname)
         
