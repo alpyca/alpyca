@@ -9,6 +9,7 @@ env:
     - ROS_DISTRO="kinetic"
 before_install:
   - sudo apt-get install -y protobuf-compiler
+  - pip install --user protobuf
 install:
   - git clone --quiet --depth 1 https://github.com/ros-industrial/industrial_ci.git .industrial_ci
 script:
