@@ -1,16 +1,15 @@
 dist: xenial
 compiler:
 - gcc
-language: generic
+language: python
 services:
   - docker
-env:
-  matrix:
-    - ROS_DISTRO="kinetic"
-before_install:
-  - sudo apt-get install -y protobuf-compiler
-  - pip install --user protobuf
+matrix:
+  include:
+    - env: USE_DEB=true ROS_DISTRO=kinetic BEFORE_SCRIPT='sh .ci_config/dependencies.sh'
 install:
   - git clone --quiet --depth 1 https://github.com/ros-industrial/industrial_ci.git .industrial_ci
 script:
+  - .industrial_ci/travis.sh
+
 - .industrial_ci/travis.sh
