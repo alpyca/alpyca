@@ -1,10 +1,10 @@
 apt -qq install --no-install-recommends --allow-unauthenticated -y \
-  build-essential python-catkin-tools python-pip protobuf-compiler
-  
-pip install --upgrade --user travis pip setuptools wheel virtualenv
+  build-essential python-catkin-tools python-pip protobuf-compiler \
+  python-dev
 
-pip install --user protobuf
-pip install --user pytest
+pip install wheel
+pip install protobuf
+pip install pytest
 
 cur_dir=$PWD
 cd ~/
