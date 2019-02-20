@@ -3,8 +3,8 @@ apt -qq install --no-install-recommends --allow-unauthenticated -y \
   
 pip install --upgrade --user travis pip setuptools wheel virtualenv
 
-pip install protobuf
-pip install pytest
+pip install --user protobuf
+pip install --user pytest
 
 cur_dir=$PWD
 cd ~/
