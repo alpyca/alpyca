@@ -6,6 +6,6 @@ cur_dir=$PWD
 cd ~/
 git clone https://github.com/pybind/pybind11.git
 cd pybind11
-cmake
+cmake .
 make install
 cd $cur_dir
