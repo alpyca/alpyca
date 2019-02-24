@@ -38,7 +38,6 @@ add_custom_command(
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-pybind_add_module(py_sensor MODULE src/alpyca/sim/py_sensor.cpp)
 pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
 pybind_add_module(msgs MODULE ${pybind_msgs})
 
