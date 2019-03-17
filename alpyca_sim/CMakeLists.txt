@@ -14,8 +14,7 @@ find_package(pybind11)
 find_package(gazebo REQUIRED)
 find_package(PythonLibs REQUIRED)
 
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS} -fvisibility=hidden")
 
 link_directories(${GAZEBO_LIBRARY_DIRS})
 include_directories(include ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
@@ -46,7 +45,6 @@ macro(pybind_add_module target_name other)
   COMMENT "Copying library files to python directory")
 endmacro(pybind_add_module)
 
-pybind_add_module(py_sensor MODULE src/alpyca/sim/py_sensor.cpp)
 pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
 pybind_add_module(msgs MODULE ${pybind_msgs})
 

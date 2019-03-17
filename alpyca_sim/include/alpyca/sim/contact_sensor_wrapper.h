@@ -22,9 +22,8 @@ namespace gazebo
     class ContactSensorWrapper : public SensorWrapper
     {
     public:
-        ContactSensorWrapper(sensors::SensorPtr _sensor) : SensorWrapper(_sensor)
+        ContactSensorWrapper(sensors::ContactSensorPtr _parentSsensor) : SensorWrapper(_parentSsensor), parentSensor(_parentSsensor)
         {
-            parentSensor = std::dynamic_pointer_cast<sensors::ContactSensor>(_sensor);
         }
 
         msgs::Contacts Contacts()
