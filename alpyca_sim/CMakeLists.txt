@@ -17,7 +17,7 @@ find_package(PythonLibs REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS} -fvisibility=hidden")
 
 link_directories(${GAZEBO_LIBRARY_DIRS})
-include_directories(include ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+include_directories(include ${CMAKE_CURRENT_BINARY_DIR} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 
 catkin_package(
   CATKIN_DEPENDS
@@ -29,6 +29,14 @@ set(pybind_msgs "${CMAKE_CURRENT_BINARY_DIR}/proto/msgs.cpp")
 add_custom_command(
     OUTPUT ${pybind_msgs}
     COMMAND python build/pybind/proto_to_pybind11.py /usr/include/gazebo-7/gazebo/msgs/proto ${pybind_msgs}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+set(contact_sensor_binding "${CMAKE_CURRENT_BINARY_DIR}/py_contact_sensor.cpp")
+set(contact_sensor_wrapper "${CMAKE_CURRENT_BINARY_DIR}/contact_sensor_wrapper.h")
+add_custom_command(
+    OUTPUT ${contact_sensor_binding} ${contact_sensor_wrapper}
+    COMMAND python src/alpyca/sim/generate_sensors.py ${CMAKE_CURRENT_SOURCE_DIR}/src/alpyca/sim ${contact_sensor_binding} ${contact_sensor_wrapper}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
@@ -45,7 +53,8 @@ macro(pybind_add_module target_name other)
   COMMENT "Copying library files to python directory")
 endmacro(pybind_add_module)
 
-pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
+#pybind_add_module(py_contact_sensor MODULE src/alpyca/sim/py_contact_sensor.cpp)
+pybind_add_module(py_contact_sensor MODULE ${contact_sensor_binding})
 pybind_add_module(msgs MODULE ${pybind_msgs})
 
 add_library(plugin_runner SHARED src/alpyca/sim/plugin_runner.cpp)

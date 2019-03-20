@@ -1,0 +1,21 @@
+/*
+ Pybind11 wrappers for {{sensor.name}}
+ */
+ 
+#include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
+#include <pybind11/stl.h>
+#include "{{sensor.name_snake_case}}_wrapper.h"
+
+
+namespace py = pybind11;
+
+namespace gazebo
+{
+    PYBIND11_MODULE(py_{{sensor.name_snake_case}}, m) {
+        py::class_<{{sensor.name}}Wrapper>(m, "Py{{sensor.name}}")
+        {% for func in sensor.functions %}.def("{{func.name}}", ({{func.returns}} ({{sensor.name}}Wrapper::*)({{func.parameters}})) &{{sensor.name}}Wrapper::{{func.name}})
+        {% endfor %}.def("SetActive", &SensorWrapper::SetActive)
+        .def("ConnectUpdated", &SensorWrapper::ConnectUpdated);
+    }
+}

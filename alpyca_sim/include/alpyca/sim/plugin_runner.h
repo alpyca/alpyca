@@ -6,7 +6,7 @@
 #include <gazebo/sensors/sensors.hh>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
-#include "alpyca/sim/contact_sensor_wrapper.h"
+#include "contact_sensor_wrapper.h"
 
 
 namespace py = pybind11;

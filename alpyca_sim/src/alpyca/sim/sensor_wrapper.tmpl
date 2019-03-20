@@ -1,0 +1,35 @@
+#ifndef _{{sensor.name_upper_case}}_WRAPPER_H_
+#define _{{sensor.name_upper_case}}_WRAPPER_H_
+
+
+#include <functional>
+#include <iostream>
+#include <vector>
+#include <gazebo/gazebo.hh>
+#include <gazebo/sensors/sensors.hh>
+#include <pybind11/pybind11.h>
+#include "alpyca/sim/sensor_wrapper.h"
+
+
+namespace py = pybind11;
+
+namespace gazebo
+{
+    class {{sensor.name}}Wrapper : public SensorWrapper
+    {
+    public:
+        {{sensor.name}}Wrapper(sensors::{{sensor.name}}Ptr _parentSensor) : SensorWrapper(_parentSensor), parentSensor(_parentSensor)
+        {
+        }
+        {% for func in sensor.functions %}
+        {{func.returns}} {{func.name}}({{func.parameters}})
+        {
+            return parentSensor->{{func.name}}({{func.only_parameters}});
+        }
+        {% endfor %}
+    private:
+        sensors::{{sensor.name}}Ptr parentSensor;
+    };
+}
+
+#endif //_{{sensor.name_upper_case}}_WRAPPER_H_
