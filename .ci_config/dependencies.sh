@@ -5,6 +5,7 @@ apt -qq install --no-install-recommends --allow-unauthenticated -y \
 pip install wheel
 pip install protobuf
 pip install pytest
+pip install CppHeaderParser
 
 cur_dir=$PWD
 cd ~/
