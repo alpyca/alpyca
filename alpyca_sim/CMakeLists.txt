@@ -16,8 +16,16 @@ find_package(PythonLibs REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS} -fvisibility=hidden")
 
+set(bindings "${CMAKE_CURRENT_BINARY_DIR}/bindings")
+set(bindings_includes "${bindings}/includes")
+set(bindings_sensors "${bindings}/sensors")
+
+file(MAKE_DIRECTORY ${bindings})
+file(MAKE_DIRECTORY ${bindings_includes})
+file(MAKE_DIRECTORY ${bindings_sensors})
+
 link_directories(${GAZEBO_LIBRARY_DIRS})
-include_directories(include ${CMAKE_CURRENT_BINARY_DIR} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+include_directories(include ${bindings_includes} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 
 catkin_package(
   CATKIN_DEPENDS
@@ -32,11 +40,14 @@ add_custom_command(
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-set(contact_sensor_binding "${CMAKE_CURRENT_BINARY_DIR}/py_contact_sensor.cpp")
-set(contact_sensor_wrapper "${CMAKE_CURRENT_BINARY_DIR}/contact_sensor_wrapper.h")
+# Replace semicolon with comma, because a semicolon is interpreted as end of line
+string(REPLACE ";" "," GAZEBO_INCLUDE_DIRS_COMMA_SEPARATED "${GAZEBO_INCLUDE_DIRS}")
+
+set(contact_sensor_binding "${bindings_sensors}/py_contact_sensor.cpp")
+set(contact_sensor_wrapper "${bindings_includes}/contact_sensor_wrapper.h")
 add_custom_command(
     OUTPUT ${contact_sensor_binding} ${contact_sensor_wrapper}
-    COMMAND python src/alpyca/sim/generate_sensors.py ${CMAKE_CURRENT_SOURCE_DIR}/src/alpyca/sim ${contact_sensor_binding} ${contact_sensor_wrapper}
+    COMMAND python src/alpyca/sim/generate_sensors.py ${CMAKE_CURRENT_SOURCE_DIR}/src/alpyca/sim ${contact_sensor_binding} ${contact_sensor_wrapper} ${GAZEBO_INCLUDE_DIRS_COMMA_SEPARATED}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 

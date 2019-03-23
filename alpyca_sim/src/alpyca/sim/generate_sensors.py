@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 import re
 
 import CppHeaderParser
@@ -18,16 +19,27 @@ def convert_upper_case(name):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('template_dir')
-    parser.add_argument('binding_path')
-    parser.add_argument('wrapper_path')
+    parser.add_argument('template_dir', type=str)
+    parser.add_argument('binding_path', type=str)
+    parser.add_argument('wrapper_path', type=str)
+    parser.add_argument('gazebo_include_dirs', type=str,
+                        help='Include directories of gazebo. The directories should comma seperated.'
+                             'These directories are searched for the header files, for which bindings should be created.')
     args = parser.parse_args()
     return args
 
 
+def find_gazebo(gazebo_include_dirs):
+    for include_dir in gazebo_include_dirs.split(','):
+        if os.path.isdir(os.path.join(include_dir, 'gazebo', 'sensors')):
+            return os.path.join(include_dir, 'gazebo')
+
+    raise ValueError('Cannot find gazebo header files!')
+
+
 if __name__ == '__main__':
     args = get_args()
-
+    gazebo_dir = find_gazebo(args.gazebo_include_dirs)
     class Sensor:
         pass
     class Function:
@@ -35,7 +47,8 @@ if __name__ == '__main__':
     class Parameter:
         pass
     sensor = Sensor()
-    cpp_header = CppHeaderParser.CppHeader(r'/usr/include/gazebo-7/gazebo/sensors/ContactSensor.hh')
+    sensor_path = os.path.join(gazebo_dir, 'sensors', 'ContactSensor.hh')
+    cpp_header = CppHeaderParser.CppHeader(sensor_path)
     sensor_class = cpp_header.classes.values()[0]
     sensor.name = sensor_class['name']
     sensor.name_snake_case = convert_snake_case(sensor_class['name'])
