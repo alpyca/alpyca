@@ -38,9 +38,9 @@ void PluginRunner::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
   guard = new py::scoped_interpreter();
   
   // Import PyContactSensor to make type-casting to the pybind11 version of the contact sensor possible.
-  py_sensor_module = py::module::import("py_contact_sensor");
+  py_sensor_module = py::module::import("sensors");
   py_msgs = py::module::import("msgs");
-  py_sensor_class = py_sensor_module.attr("PyContactSensor");
+  py_sensor_class = py_sensor_module.attr("ContactSensor");
   custom_plugin_module = py::module::import("alpyca.sim.contact_plugin");
   plugin_class = custom_plugin_module.attr("ContactPlugin");
 
