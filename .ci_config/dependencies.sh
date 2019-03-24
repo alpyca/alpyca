@@ -5,6 +5,8 @@ apt -qq install --no-install-recommends --allow-unauthenticated -y \
 pip install wheel
 pip install protobuf
 pip install pytest
+pip install robotpy-cppheaderparser
+pip install Jinja2
 
 cur_dir=$PWD
 cd ~/
