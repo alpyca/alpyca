@@ -47,24 +47,64 @@ def inherits_sensor(sensor_class):
             found = True
     return found
 
-if __name__ == '__main__':
-    args = get_args()
-    gazebo_dir = find_gazebo(args.gazebo_include_dirs)
-    class Sensor:
-        pass
-    class Function:
-        pass
-    class Parameter:
-        pass
 
+class Sensor:
+    def __init__(self, header_sensor):
+        self.name = header_sensor['name']
+        self.name_snake_case = convert_snake_case(header_sensor['name'])
+        self.name_upper_case = convert_upper_case(header_sensor['name'])
+        sensor_functions = header_sensor['methods']['public']
+        self.inherits = [inherits['class'] for inherits in header_sensor['inherits']]
+        self.inherits_sensor = False
+
+        self.functions = []
+        for func in sensor_functions:
+            function = Function(func)
+
+            if function.name in [self.name, 'Load', 'Init']:
+                continue
+            if not function.deprecated:
+                self.functions.append(function)
+
+
+class Function:
+    def __init__(self, header_func):
+        deprecated = False
+        self.name = header_func['name']
+        self.returns = header_func['returns']
+        only_parameters = []
+        parameters = []
+
+        for param in header_func['parameters']:
+            if 'GAZEBO_DEPRECATED' in param['type']:
+                deprecated = True
+            only_parameters.append(param['name'])
+            parameters.append(param['type'] + ' ' + param['name'])
+        self.type_and_parameters = ', '.join(parameters)
+        self.parameters = ', '.join(only_parameters)
+        self.deprecated = deprecated
+
+
+def check_if_inherits_sensor(sensors):
+    something_changed = True
+    while something_changed:
+        something_changed = False
+        for sensor, _ in sensors:
+ 
+            for inherits in sensor.inherits:
+                if inherits == 'Sensor':
+                    if sensor.inherits_sensor == False:
+                        something_changed = True
+                        sensor.inherits_sensor = True
+
+
+def read_sensors(gazebo_dir, wrapper_dir):
     sensors = []
     sensors_dir = os.path.join(gazebo_dir, 'sensors')
     for sensor_path in os.listdir(sensors_dir):
         if not sensor_path.endswith('.hh'):
             continue
-        sensor = Sensor()
-        sensor_file_name = os.path.basename(sensor_path).split('.')[0]
-
+        
         sensor_abs_path = os.path.join(sensors_dir, sensor_path)
 
         try:
@@ -77,46 +117,43 @@ if __name__ == '__main__':
 
         sensor_class = cpp_header.classes.values()[0]
 
-        if not inherits_sensor(sensor_class):
-            continue 
-        if sensor_class['name'] != 'ContactSensor':
+        #if not inherits_sensor(sensor_class):
+        #    continue 
+        if not(sensor_class['name'] == 'ContactSensor' or sensor_class['name'] == 'AltimeterSensor'):
             continue
-        sensor.name = sensor_class['name']
-        sensor.name_snake_case = convert_snake_case(sensor_class['name'])
-        sensor.name_upper_case = convert_upper_case(sensor_class['name'])
-        sensor_functions = sensor_class['methods']['public']
-    
-        sensor.functions = []
-        for func in sensor_functions:
-            deprecated = False
-            function = Function()
-            function.name = func['name']
-            if function.name in [sensor.name, 'Load', 'Init']:
-                continue
-
-            function.returns = func['returns']
-            only_parameters = []
-            parameters = []
-
-            for param in func['parameters']:
-                if 'GAZEBO_DEPRECATED' in param['type']:
-                    deprecated = True
-                only_parameters.append(param['name'])
-                parameters.append(param['type'] + ' ' + param['name'])
-            function.parameters = ', '.join(parameters)
-            function.only_parameters = ', '.join(only_parameters)
-            if not deprecated:
-                sensor.functions.append(function)
-        env = Environment(loader=FileSystemLoader(args.template_dir))
-        template_binding = env.get_template('sensor_binding.tmpl')
-        template_wrapper = env.get_template('sensor_wrapper.tmpl')
-
+        
+        sensor = Sensor(sensor_class)
+        #Problems: CameraSensor pointer, RFIDTag, Sensors which do not inherit from sensor
+        sensor_file_name = os.path.basename(sensor_path).split('.')[0]
         wrapper_file_name = convert_snake_case(sensor_file_name) + '_wrapper.h'
-        sensor_wrapper_path = os.path.join(args.wrapper_dir, wrapper_file_name)
+        sensor_wrapper_path = os.path.join(wrapper_dir, wrapper_file_name)
+
+        sensors.append((sensor, sensor_wrapper_path))
+        check_if_inherits_sensor(sensors)
+        sensors = [sensor for sensor in sensors if sensor[0].inherits_sensor]
+    
+    return sensors
+
+
+def create_bindings(sensors, template_dir, sensor_binding_path):
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template_binding = env.get_template('sensor_binding.tmpl')
+    template_wrapper = env.get_template('sensor_wrapper.tmpl')
+
+    for sensor, sensor_wrapper_path in sensors:
         with open(sensor_wrapper_path, 'w') as sensor_wrapper:
             sensor_wrapper.write(template_wrapper.render(sensor=sensor))
 
-        sensors.append(sensor)
-    
-    with open(args.sensor_binding_path, 'w') as sensor_binding:
+    with open(sensor_binding_path, 'w') as sensor_binding:
         sensor_binding.write(template_binding.render(sensors=sensors))
+
+
+def main():
+    args = get_args()
+    gazebo_dir = find_gazebo(args.gazebo_include_dirs)
+    sensors = read_sensors(gazebo_dir, args.wrapper_dir)
+    create_bindings(sensors, args.template_dir, args.sensor_binding_path)
+
+
+if __name__ == '__main__':
+    main()

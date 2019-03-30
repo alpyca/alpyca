@@ -22,9 +22,9 @@ namespace gazebo
         {
         }
         {% for func in sensor.functions %}
-        {{func.returns}} {{func.name}}({{func.parameters}})
+        {{func.returns}} {{func.name}}({{func.type_and_parameters}})
         {
-            return parentSensor->{{func.name}}({{func.only_parameters}});
+            return parentSensor->{{func.name}}({{func.parameters}});
         }
         {% endfor %}
     private:

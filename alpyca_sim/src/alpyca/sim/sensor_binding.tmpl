@@ -5,17 +5,17 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
-{% for sensor in sensors %}#include "{{sensor.name_snake_case}}_wrapper.h"{% endfor %}
-
+{% for sensor, _ in sensors %}#include "{{sensor.name_snake_case}}_wrapper.h"
+{% endfor %}
 
 namespace py = pybind11;
 
 namespace gazebo
 {
     PYBIND11_MODULE(sensors, m) {
-        {% for sensor in sensors %}
+        {% for sensor, _ in sensors %}
         py::class_<{{sensor.name}}Wrapper>(m, "{{sensor.name}}")
-        {% for func in sensor.functions %}.def("{{func.name}}", ({{func.returns}} ({{sensor.name}}Wrapper::*)({{func.parameters}})) &{{sensor.name}}Wrapper::{{func.name}})
+        {% for func in sensor.functions %}.def("{{func.name}}", ({{func.returns}} ({{sensor.name}}Wrapper::*)({{func.type_and_parameters}})) &{{sensor.name}}Wrapper::{{func.name}})
         {% endfor %}.def("SetActive", &SensorWrapper::SetActive)
         .def("ConnectUpdated", &SensorWrapper::ConnectUpdated);
         {% endfor %}
