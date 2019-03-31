@@ -6,7 +6,7 @@
 #include <gazebo/sensors/sensors.hh>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
-#include "contact_sensor_wrapper.h"
+#include "sensor_wrapper.h"
 
 
 namespace py = pybind11;
@@ -24,15 +24,18 @@ namespace gazebo
     public: void OnUpdate();
 
     private:
-        py::object plugin;
-        py::object py_sensor_class;
-        py::object py_msgs;
-        py::object plugin_class;
-        py::object load_func;
-        py::module py_sensor_module;
-        py::module custom_plugin_module;
-        ContactSensorWrapper *sensor_wrapper;
-        py::scoped_interpreter* guard;
+      py::object plugin;
+      py::object py_sensor_class;
+      py::object py_msgs;
+      py::object plugin_class;
+      py::object load_func;
+      py::module py_sensor_module;
+      py::module custom_plugin_module;
+      SensorWrapper *sensor_wrapper;
+      py::scoped_interpreter* guard;
+
+      template<typename TWrapper, typename TSensor>
+      void LoadTemplate(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf);
   };
 }
 

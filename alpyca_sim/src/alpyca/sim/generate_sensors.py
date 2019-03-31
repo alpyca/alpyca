@@ -8,6 +8,8 @@ import CppHeaderParser
 from jinja2 import Environment, FileSystemLoader
 
 
+blacklist = set(['CameraSensor', 'MultiCameraSensor', 'RFIDSensor', 'GpuRaySensor'])
+
 def convert_snake_case(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
@@ -85,21 +87,24 @@ class Function:
         self.deprecated = deprecated
 
 
-def check_if_inherits_sensor(sensors):
+def filter_sensors(sensors):
+
     something_changed = True
-    while something_changed:
-        something_changed = False
+    inherits_from_sensor = set()
+    number_sensors = -1
+    while len(inherits_from_sensor) != number_sensors:
+        number_sensors = len(inherits_from_sensor)
         for sensor, _ in sensors:
  
             for inherits in sensor.inherits:
-                if inherits == 'Sensor':
-                    if sensor.inherits_sensor == False:
-                        something_changed = True
-                        sensor.inherits_sensor = True
+                if inherits == 'Sensor' or inherits in inherits_from_sensor:
+                    inherits_from_sensor.add(sensor.name)
+
+    return [sensor_tupple for sensor_tupple in sensors if sensor_tupple[0].name in inherits_from_sensor]
 
 
 def read_sensors(gazebo_dir, wrapper_dir):
-    sensors = []
+    possible_sensors = []
     sensors_dir = os.path.join(gazebo_dir, 'sensors')
     for sensor_path in os.listdir(sensors_dir):
         if not sensor_path.endswith('.hh'):
@@ -117,20 +122,17 @@ def read_sensors(gazebo_dir, wrapper_dir):
 
         sensor_class = cpp_header.classes.values()[0]
 
-        #if not inherits_sensor(sensor_class):
-        #    continue 
-        if not(sensor_class['name'] == 'ContactSensor' or sensor_class['name'] == 'AltimeterSensor'):
+        if sensor_class['name'] in blacklist:
             continue
         
         sensor = Sensor(sensor_class)
-        #Problems: CameraSensor pointer, RFIDTag, Sensors which do not inherit from sensor
+
         sensor_file_name = os.path.basename(sensor_path).split('.')[0]
         wrapper_file_name = convert_snake_case(sensor_file_name) + '_wrapper.h'
         sensor_wrapper_path = os.path.join(wrapper_dir, wrapper_file_name)
 
-        sensors.append((sensor, sensor_wrapper_path))
-        check_if_inherits_sensor(sensors)
-        sensors = [sensor for sensor in sensors if sensor[0].inherits_sensor]
+        possible_sensors.append((sensor, sensor_wrapper_path))
+    sensors = filter_sensors(possible_sensors)
     
     return sensors
 
