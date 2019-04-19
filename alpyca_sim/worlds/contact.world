@@ -32,6 +32,7 @@
         <sensor name="plugin_runner" type="contact">
           <plugin name="plugin_runner" filename="libplugin_runner.so">
             <python_plugin>alpyca.sim.contact_plugin</python_plugin>
+            <text>hello world</text>
           </plugin>
           <contact>
             <collision>box_collision</collision>

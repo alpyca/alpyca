@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import std_msgs
+import rospy
 
 class ContactPlugin:
     """ A Gazebo ContactPlugin written completely in Python """
@@ -7,7 +9,7 @@ class ContactPlugin:
     def __init__(self):
         self.sensor = None
 
-    def Load(self, sensor):
+    def Load(self, sensor, sdf):
         """ Load the sensor plugin
         
         Parameters
@@ -17,6 +19,13 @@ class ContactPlugin:
         """
 
         self.sensor = sensor
+
+        rospy.init_node('talker', anonymous=True)
+
+        self.pub = rospy.Publisher('text', std_msgs.msg.String, queue_size=10)
+        if sdf.HasElement('text'):
+            self.text = sdf.GetString('text')
+            print('text: ' + self.text)
 
         sensor.ConnectUpdated(self.OnUpdate)
         sensor.SetActive(True)
@@ -34,3 +43,5 @@ class ContactPlugin:
                 print("Position: {} {} {}".format(position.x, position.y, position.z))
                 print("Normal: {} {} {}".format(normal.x, normal.y, normal.z))
                 print("Depth: {}".format(depth))
+
+        self.pub.publish(std_msgs.msg.String(self.text))

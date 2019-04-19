@@ -67,6 +67,7 @@ endmacro(pybind_add_module)
 
 pybind_add_module(sensors MODULE ${bindings_sensors})
 pybind_add_module(msgs MODULE ${pybind_msgs})
+pybind_add_module(element MODULE src/alpyca/sim/element.cpp)
 
 add_library(plugin_runner SHARED src/alpyca/sim/plugin_runner.cpp)
 target_link_libraries(plugin_runner ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PYTHON_LIBRARIES})

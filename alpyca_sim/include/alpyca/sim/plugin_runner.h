@@ -30,6 +30,7 @@ namespace gazebo
       py::object plugin_class;
       py::object load_func;
       py::module py_sensor_module;
+      py::module py_sys;
       py::module custom_plugin_module;
       SensorWrapper *sensor_wrapper;
       py::scoped_interpreter* guard;

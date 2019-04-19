@@ -85,17 +85,23 @@ void PluginRunner::LoadTemplate(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf
   sensor_name[0] = toupper(sensor_name[0]);
   // Start the interpreter and keep it alive
   guard = new py::scoped_interpreter();
-  
+
+  // Rospy looks for sys.argv, so it has to be created
+  py_sys = py::module::import("sys");
+  py_sys.attr("argv") = py::list();
+
   // Import PyContactSensor to make type-casting to the pybind11 version of the contact sensor possible.
   py_sensor_module = py::module::import("sensors");
   py_msgs = py::module::import("msgs");
   py_sensor_class = py_sensor_module.attr(sensor_name.c_str());
+  py::object sdf_obj = py::module::import("element");
   custom_plugin_module = py::module::import(python_plugin.c_str());
   plugin_class = custom_plugin_module.attr(python_plugin_class.c_str());
 
   plugin = plugin_class();
   load_func = plugin.attr("Load");
-  load_func((TWrapper*)sensor_wrapper);//, _sdf);
+
+  load_func((TWrapper*)sensor_wrapper, _sdf);
 }
 
 void PluginRunner::Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
