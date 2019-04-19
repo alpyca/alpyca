@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package>
+  <name>alpyca_launch</name>
+  <version>0.0.1</version>
+  <description>ROS launch system based on python.</description>
+
+  <maintainer email="amiller89@gmx.de">Sebastian Boehle</maintainer>
+  <author email="amiller89@gmx.de">Artur Miller</author>
+  <author email="boehle@gmail.com">Sebastian Boehle</author>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>
