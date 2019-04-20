@@ -11,6 +11,8 @@ catkin_install_python(PROGRAMS
     src/alpyca/__init__.py
     src/alpyca/launch/__init__.py
     src/alpyca/launch/launcher.py
+    src/alpyca/launch/master.py
+    src/alpyca/launch/node.py
     src/alpyca/launch/example.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}/aplyca)
 
