@@ -7,6 +7,7 @@ import types
 
 import rospy
 from alpyca_launch.msg import State, NodeState
+from alpyca_launch.srv import StartStop, StartStopRequest, StartStopResponse
 
 __all__ = ['Launcher']
 
@@ -25,7 +26,7 @@ class Launcher(object):
 
     def _run(self):
         for node in self.nodes:
-            node.run()
+            node.start()
         for launcher in self.launchers:
             launcher._run()
 
@@ -36,11 +37,33 @@ class Launcher(object):
 
         return itertools.chain.from_iterable(all_nodes)
 
+    def start_node(self, node_name):
+        for node in self.iter_all_nodes():
+            if node.node_name == node_name:
+                node.start()
+
+    def stop_node(self, node_name):
+        for node in self.iter_all_nodes():
+            if node.node_name == node_name:
+                node.stop()
+
+    def start_stop(self, req):
+        if req.action == StartStopRequest.START:
+            self.start_node(req.node)
+        elif req.action == StartStopRequest.STOP:
+            self.stop_node(req.node)
+        else:
+            pass
+            # TODO: Log bad action
+
+        return StartStopResponse()
+
     def run(self):
         self._run()
 
         rospy.init_node('alpyca_launch')
         pub = rospy.Publisher('launch_topic', State, queue_size=5)
+        start_stop_service = rospy.Service('start_stop', StartStop, self.start_stop)
 
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():

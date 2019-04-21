@@ -14,8 +14,11 @@ class Node(object):
         self.executable = executable
         self.node_name = node_name
 
-    def run(self):
+    def start(self):
         self.process = Popen(['rosrun', self.package_name, self.executable, '__name:=' + self.node_name])
+
+    def stop(self):
+        self.process.terminate()
 
     def __del__(self):
         self.process.terminate()

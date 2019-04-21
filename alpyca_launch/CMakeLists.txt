@@ -13,6 +13,10 @@ add_message_files(FILES
 	State.msg
 )
 
+add_service_files(FILES
+	StartStop.srv
+)
+
 catkin_python_setup()
 
 generate_messages(DEPENDENCIES
