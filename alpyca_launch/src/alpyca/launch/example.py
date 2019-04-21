@@ -3,18 +3,21 @@ from __future__ import division, absolute_import, print_function
 
 import time
 
-from alpyca.launch import Launcher, Master, Node
+from alpyca.launch import Launch, Master, Node, Runner
 
 
 def main():
-    with Master() as master:
-        sub_launcher = Launcher()
-        sub_launcher.add_node(Node('turtlesim', 'turtlesim_node', 'node1'))
+    sub_launch = Launch()
+    sub_launch.add_node(Node('turtlesim', 'turtlesim_node', 'node1'))
 
-        main_launcher = Launcher()
-        main_launcher.add_node(Node('turtlesim', 'turtlesim_node', 'node2'))
-        main_launcher.add_launcher(sub_launcher)
-        main_launcher.run()
+    main_launch = Launch()
+    main_launch.add_node(Node('turtlesim', 'turtlesim_node', 'node2'))
+    main_launch.add_launch(sub_launch)
+
+    with Master() as master:
+        runner = Runner()
+        runner.run(main_launch)
+
 
 if __name__ == "__main__":
     main()
