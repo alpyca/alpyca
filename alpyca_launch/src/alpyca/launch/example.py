@@ -7,12 +7,15 @@ from alpyca.launch import Launch, Master, Node, Runner
 
 
 def main():
-    sub_launch = Launch()
-    sub_launch.add_node(Node('turtlesim', 'turtlesim_node', 'node1'))
+    sub1_launch = Launch()
+    sub1_launch.add_node(Node('turtlesim', 'turtlesim_node', 'node1'))
+
+    sub2_launch = Launch.from_file('alpyca_launch', 'example.launch')
 
     main_launch = Launch()
     main_launch.add_node(Node('turtlesim', 'turtlesim_node', 'node2'))
-    main_launch.add_launch(sub_launch)
+    main_launch.add_launch(sub1_launch)
+    main_launch.add_launch(sub2_launch)
 
     with Master() as master:
         runner = Runner()
