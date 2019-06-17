@@ -1,3 +1,6 @@
 <launch>
-    <node pkg="turtlesim" name="node3" type="turtlesim_node"/>
+    <arg name="x" default="hello" />
+    <arg name="y" default="$(arg x)_world" />
+    <arg name="z" default="$(find alpyca_launch) $(arg y)" />
+    <node pkg="turtlesim" name="$(arg y)" type="turtlesim_node"/>
 </launch>
