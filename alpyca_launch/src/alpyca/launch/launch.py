@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 from __future__ import division, absolute_import, print_function
 
+import yaml
+import math
 import os
 import re
 import subprocess
 import xml.etree.ElementTree as et
 from collections import namedtuple
 from functools import partial
+from itertools import chain
 
 from alpyca.launch.node import Node
+from alpyca.launch.param import Param
 
 __all__ = ['Launch']
 
@@ -18,12 +22,14 @@ def find_package(package_name):
 
 
 Match = namedtuple('Match', ['start', 'end', 'keyword', 'value', 'replacement'])
+Remap = namedtuple('Remap', ['from_topic', 'to_topic'])
 
 
 class Substitutor(object):
 
-    def __init__(self, args):
+    def __init__(self, args, dirname):
         self.args = args
+        self.dirname = dirname
 
 
 
@@ -34,12 +40,21 @@ class Substitutor(object):
         for re_match in re.finditer(expr, text):
             start = re_match.start()
             end = re_match.end()
-            keyword, value = text[start+2:end-1].split(' ')
+
+            words = text[start+2:end-1].split(' ')
+            keyword = words[0]
+            value = ' '.join(words[1:])
 
             if keyword == 'find':
                replacement = find_package(value)
             elif keyword == 'arg':
                replacement = self.args[value]
+            elif keyword == 'eval':
+                eval_args = dict(self.args)
+                eval_args['pi'] = math.pi
+                replacement = str(eval(value, None, eval_args))
+            elif keyword == 'dirname':
+                replacement = self.dirname
             else:
                # TODO: Throw exception
                pass
@@ -49,10 +64,20 @@ class Substitutor(object):
         return matches
 
     def substitute_arg(self, text):
-        print('before: ' + text)
         matches = self.find_action(text)
         sub_text = Substitutor.replace(text, matches)
-        print('after: ' + sub_text)
+        if sub_text.lower() == 'true':
+            sub_text = True
+        elif sub_text.lower() == 'false':
+            sub_text = False
+        else:
+            try:
+                sub_text = int(sub_text)
+            except ValueError:
+                try:
+                    sub_text = float(sub_text)
+                except ValueError:
+                    pass
         return sub_text
 
     @staticmethod
@@ -69,6 +94,8 @@ class Substitutor(object):
             text_list.append(matches[index].replacement)
 
         text_list.append(text[matches[-1].end:])
+
+        text_list = [str(text) for text in text_list]
         text = ''.join(text_list)
 
         return text
@@ -77,28 +104,34 @@ class Substitutor(object):
 
 class Launch(object):
 
-    def __init__(self):
+    def __init__(self, args=None):
         self.nodes = []
         self.launches = []
-        self.args = {}
+        self.params = []
+        self.remaps = {}
+        if args is None:
+            self.args = {}
+        else:
+            self.args = args
 
     @classmethod
-    def from_launch(cls, package_name, launch_filename):
+    def from_launch(cls, package_name, launch_filename, args=None):
         launch_path = cls.find_launch(package_name, launch_filename)
-        return cls.from_launch_filename(launch_path)
+        return cls.from_launch_filename(launch_path, args)
 
     @classmethod
-    def from_xml_element(cls, element, sub):
+    def from_xml_element(cls, element, sub, args=None):
         filename = sub.substitute_arg(element.get('file'))
-        return cls.from_launch_filename(filename)
+        return cls.from_launch_filename(filename, args)
 
     @classmethod
-    def from_launch_filename(cls, filename):
+    def from_launch_filename(cls, filename, args=None):
         with open(filename, 'r') as file:
             text = file.read()
 
-        launch = cls()
-        sub = Substitutor(launch.args)
+        launch = cls(args)
+
+        sub = Substitutor(launch.args, os.path.dirname(filename))
 
         tree = et.parse(filename)
         root = tree.getroot()
@@ -106,31 +139,75 @@ class Launch(object):
         # TODO: include, arg, env, group, include, node, test, machine, param, remap, rosparam
         for element in root:
             if element.tag == 'include':
-                launch.launches.append(Launch.from_xml_element(element, sub))
+                pass_all_args = False
+                if 'pass_all_args' in element.keys():
+                    pass_all_args = element.get('pass_all_args').lower() == 'true'
+                if pass_all_args:
+                    launch.launches.append(Launch.from_xml_element(element, sub, dict(launch.args)))
+                else:
+                    launch.launches.append(Launch.from_xml_element(element, sub))
             elif element.tag == 'arg':
                 name = element.get('name')
-                default = element.get('default')
-                value = sub.substitute_arg(default)
+                if 'default' in element.keys():
+                    if name in launch.args:
+                        value = launch.args[name]
+                    else:
+                        value = sub.substitute_arg(element.get('default'))
+                else: # 'value' in element.keys()
+                    value = sub.substitute_arg(element.get('value'))
                 launch.args[name] = value
             elif element.tag == 'env':
                 pass
             elif element.tag == 'group':
                 pass
             elif element.tag == 'node':
+                remaps = dict(launch.remaps)
+                params = {}
+                for sub_element in element:
+                    if sub_element.tag == 'remap':
+                        remaps[sub.substitute_arg(sub_element.get('from'))] = sub.substitute_arg(sub_element.get('to'))
+                    elif sub_element.tag == 'param':
+                        params[sub.substitute_arg(sub_element.get('name'))] = sub.substitute_arg(sub_element.get('value'))
                 package_name = sub.substitute_arg(element.get('pkg'))
                 executable = sub.substitute_arg(element.get('type'))
                 node_name = sub.substitute_arg(element.get('name'))
-                launch.nodes.append(Node(package_name, executable, node_name))
+                launch.nodes.append(Node(package_name, executable, node_name, params=params, remaps=remaps))
             elif element.tag == 'test':
                 pass
             elif element.tag == 'machine':
                 pass
             elif element.tag == 'param':
-                pass
+                name = element.get('name')
+
+                if 'value' in element.keys():
+                    value = sub.substitute_arg(element.get('value'))
+                else: # 'command' in element.keys()
+                    value = subprocess.check_output(sub.substitute_arg(element.get('command')).split(' '))
+
+                param = Param(name, value)
+                launch.params.append(param)
             elif element.tag == 'remap':
-                pass
+                from_topic = sub.substitute_arg(element.get('from'))
+                to_topic = sub.substitute_arg(element.get('to'))
+
+                launch.remaps[from_topic] = to_topic
             elif element.tag == 'rosparam':
-                pass
+                subst_value = True
+                if 'subst_value' in element.keys():
+                    subst_value = element.get('subst_value').lower() == 'true'
+
+                if 'file' in element.keys():
+                    with open(sub.substitute_arg(element.get('file')), 'r') as yaml_file:
+                        text = yaml_file.read()
+                else:
+                    text = element.text
+
+                if subst_value:
+                    text = sub.substitute_arg(text)
+                
+                if text.replace('\n', '').replace('\t', '') != '':
+                    parameters = Param.from_dicts(yaml.safe_load(text))
+                    launch.params += parameters
             else:
                 pass
                 # TODO: Throw exception
@@ -141,6 +218,8 @@ class Launch(object):
     def find_launch(package_name, launch_filename):
         package_path = find_package(package_name)
         launch_path = os.path.join(package_path, 'launch', launch_filename)
+        if not os.path.isfile(launch_path):
+             launch_path = os.path.join(package_path, launch_filename)
         return launch_path
 
     def add_node(self, node):
@@ -154,3 +233,10 @@ class Launch(object):
             nodes[node.node_name] = node
         for launch in self.launches:
             launch.append_nodes(nodes)
+
+    def get_all_params(self):
+        all_params = [self.params]
+        for launch in self.launches:
+            all_params.append(launch.get_all_params())
+
+        return list(chain.from_iterable(all_params))
