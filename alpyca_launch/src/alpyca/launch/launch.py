@@ -14,7 +14,7 @@ from itertools import chain
 from alpyca.launch.node import Node
 from alpyca.launch.param import Param
 
-__all__ = ['Launch']
+__all__ = ['Launch', 'ParsingExeption']
 
 
 def find_package(package_name):
@@ -25,13 +25,19 @@ Match = namedtuple('Match', ['start', 'end', 'keyword', 'value', 'replacement'])
 Remap = namedtuple('Remap', ['from_topic', 'to_topic'])
 
 
+class ParsingException(Exception):
+    pass
+
+
 class Substitutor(object):
 
-    def __init__(self, args, dirname):
-        self.args = args
+    def __init__(self, dirname, args=None):
         self.dirname = dirname
 
-
+        if args is None:
+            self.args = {}
+        else:
+            self.args = args
 
     def find_action(self, text):
         expr = r'\$\((.*?)\)'
@@ -46,9 +52,12 @@ class Substitutor(object):
             value = ' '.join(words[1:])
 
             if keyword == 'find':
-               replacement = find_package(value)
+                replacement = find_package(value)
             elif keyword == 'arg':
-               replacement = self.args[value]
+                value = value.replace(' ', '')
+                if value not in self.args:
+                    raise ParsingException('Unknown argument {}!'.format(value))
+                replacement = self.args[value]
             elif keyword == 'eval':
                 eval_args = dict(self.args)
                 eval_args['pi'] = math.pi
@@ -56,8 +65,8 @@ class Substitutor(object):
             elif keyword == 'dirname':
                 replacement = self.dirname
             else:
-               # TODO: Throw exception
-               pass
+                # TODO: Throw exception
+                pass
             match = Match(start, end, keyword, value, replacement)
             matches.append(match)
         
@@ -104,37 +113,13 @@ class Substitutor(object):
 
 class Launch(object):
 
-    def __init__(self, args=None):
+    def __init__(self, root, sub):
         self.nodes = []
         self.launches = []
         self.params = []
         self.remaps = {}
-        if args is None:
-            self.args = {}
-        else:
-            self.args = args
 
-    @classmethod
-    def from_launch(cls, package_name, launch_filename, args=None):
-        launch_path = cls.find_launch(package_name, launch_filename)
-        return cls.from_launch_filename(launch_path, args)
-
-    @classmethod
-    def from_xml_element(cls, element, sub, args=None):
-        filename = sub.substitute_arg(element.get('file'))
-        return cls.from_launch_filename(filename, args)
-
-    @classmethod
-    def from_launch_filename(cls, filename, args=None):
-        with open(filename, 'r') as file:
-            text = file.read()
-
-        launch = cls(args)
-
-        sub = Substitutor(launch.args, os.path.dirname(filename))
-
-        tree = et.parse(filename)
-        root = tree.getroot()
+        self.args = sub.args
 
         # TODO: include, arg, env, group, include, node, test, machine, param, remap, rosparam
         for element in root:
@@ -143,25 +128,28 @@ class Launch(object):
                 if 'pass_all_args' in element.keys():
                     pass_all_args = element.get('pass_all_args').lower() == 'true'
                 if pass_all_args:
-                    launch.launches.append(Launch.from_xml_element(element, sub, dict(launch.args)))
+                    self.launches.append(Launch.from_xml_element(element, sub, dict(self.args)))
                 else:
-                    launch.launches.append(Launch.from_xml_element(element, sub))
+                    self.launches.append(Launch.from_xml_element(element, sub))
             elif element.tag == 'arg':
                 name = element.get('name')
                 if 'default' in element.keys():
-                    if name in launch.args:
-                        value = launch.args[name]
+                    if name in self.args:
+                        value = self.args[name]
                     else:
                         value = sub.substitute_arg(element.get('default'))
-                else: # 'value' in element.keys()
+                elif 'value' in element.keys():
                     value = sub.substitute_arg(element.get('value'))
-                launch.args[name] = value
+                else:
+                    # value has to be given by constructor, or other launch file
+                    continue
+                self.args[name] = value
             elif element.tag == 'env':
                 pass
             elif element.tag == 'group':
                 pass
             elif element.tag == 'node':
-                remaps = dict(launch.remaps)
+                remaps = dict(self.remaps)
                 params = {}
                 for sub_element in element:
                     if sub_element.tag == 'remap':
@@ -171,7 +159,7 @@ class Launch(object):
                 package_name = sub.substitute_arg(element.get('pkg'))
                 executable = sub.substitute_arg(element.get('type'))
                 node_name = sub.substitute_arg(element.get('name'))
-                launch.nodes.append(Node(package_name, executable, node_name, params=params, remaps=remaps))
+                self.nodes.append(Node(package_name, executable, node_name, params=params, remaps=remaps))
             elif element.tag == 'test':
                 pass
             elif element.tag == 'machine':
@@ -185,12 +173,12 @@ class Launch(object):
                     value = subprocess.check_output(sub.substitute_arg(element.get('command')).split(' '))
 
                 param = Param(name, value)
-                launch.params.append(param)
+                self.params.append(param)
             elif element.tag == 'remap':
                 from_topic = sub.substitute_arg(element.get('from'))
                 to_topic = sub.substitute_arg(element.get('to'))
 
-                launch.remaps[from_topic] = to_topic
+                self.remaps[from_topic] = to_topic
             elif element.tag == 'rosparam':
                 subst_value = True
                 if 'subst_value' in element.keys():
@@ -207,11 +195,34 @@ class Launch(object):
                 
                 if text.replace('\n', '').replace('\t', '') != '':
                     parameters = Param.from_dicts(yaml.safe_load(text))
-                    launch.params += parameters
+                    self.params += parameters
             else:
                 pass
                 # TODO: Throw exception
 
+    @classmethod
+    def from_launch(cls, package_name, launch_filename, args=None):
+        launch_path = cls.find_launch(package_name, launch_filename)
+        return cls.from_launch_filename(launch_path, args)
+
+    @classmethod
+    def from_xml_element(cls, element, sub, args=None):
+        filename = sub.substitute_arg(element.get('file'))
+        return cls.from_launch_filename(filename, args)
+
+    @classmethod
+    def from_launch_filename(cls, filename, args=None):
+        sub = Substitutor(os.path.dirname(filename), args)
+        tree = et.parse(filename)
+        root = tree.getroot()
+        launch = cls(root, sub)
+        return launch
+
+    @classmethod
+    def from_string(cls, string, filename='', args=None):
+        sub = Substitutor(os.path.dirname(filename), args)
+        root = et.fromstring(string)
+        launch = cls(root, sub)
         return launch
 
     @staticmethod
