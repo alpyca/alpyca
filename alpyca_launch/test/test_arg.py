@@ -83,3 +83,4 @@ if __name__ == '__main__':
     rostest.rosrun(PKG, 'test_arg_basic', TestArg)
     rostest.rosrun(PKG, 'test_arg_from_external', TestArg)
     rostest.rosrun(PKG, 'test_arg_unset', TestArg)
+    rostest.rosrun(PKG, 'test_arg_whitespace', TestArg)

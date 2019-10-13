@@ -33,3 +33,15 @@ catkin_install_python(PROGRAMS
     src/alpyca/launch/example.py
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}/aplyca)
 
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/test_arg.py)
+  catkin_add_nosetests(test/test_basic.py)
+  catkin_add_nosetests(test/test_env.py)
+  catkin_add_nosetests(test/test_if_unless.py)
+  catkin_add_nosetests(test/test_include.py)
+  catkin_add_nosetests(test/test_node.py)
+  catkin_add_nosetests(test/test_param.py)
+  catkin_add_nosetests(test/test_remap.py)
+  catkin_add_nosetests(test/test_rosparam.py)
+  catkin_add_nosetests(test/test_subst.py)
+endif()

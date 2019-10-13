@@ -14,4 +14,6 @@
   <depend>message_generation</depend>
   <depend>std_msgs</depend>
 
+  <test_depend>unittest</test_depend>
+
 </package>

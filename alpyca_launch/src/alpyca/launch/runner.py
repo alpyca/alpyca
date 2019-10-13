@@ -30,7 +30,7 @@ class Runner(object):
 
         for node in self.nodes.values():
             node.start()
-        for param in launch.get_all_params():
+        for param in launch.get_all_params().values():
             param.start()
 
         rospy.init_node('alpyca_launch')

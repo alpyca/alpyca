@@ -39,7 +39,7 @@ yaml:
 	<rosparam>
 	</rosparam>
 	
-	<node name="test1" pkg="alpyca_launch" type="test_node.py">
+	<node name="test1" pkg="alpyca_launch" type="dummy_node.py">
 		<remap from="~input" to="/test_input" />
 		<remap from="~output" to="/test_output" />
 
@@ -50,7 +50,7 @@ yaml:
 	<!-- Test global remapping -->
 	<remap from="original_test_input" to="remapped_test_input" />
 	<remap from="original_test_output" to="remapped_test_output" />
-	<node name="test2" pkg="alpyca_launch" type="test_node.py">
+	<node name="test2" pkg="alpyca_launch" type="dummy_node.py">
 			<remap from="~input" to="/original_test_input" />
 			<remap from="~output" to="/original_test_output" />
 	</node>-
