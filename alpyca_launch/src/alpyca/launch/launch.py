@@ -21,12 +21,34 @@ def env(name):
     return os.environ[name]
 
 
-def find(package_name):
+def simple_find(package):
     try:
-        return subprocess.check_output(['rospack', 'find', package_name]).replace('\n', '')
+        return subprocess.check_output(['rospack', 'find', package]).replace('\n', '')
     except subprocess.CalledProcessError:
-        raise ParsingException('Unknown package ' + package_name)
+        raise ParsingException('Unknown package ' + package)
 
+def find(package, name):
+    env_cmake = os.environ['CMAKE_PREFIX_PATH'].split(':')
+    catkin_workspaces = [path for path in env_cmake if os.path.isfile(path + os.sep + '.catkin')]
+
+    for workspace in catkin_workspaces:
+        exec_path = workspace + os.sep + 'lib' + os.sep + package
+        file_path = exec_path + name
+        if os.path.isfile(file_path):
+            return exec_path
+        
+        share_path = workspace + os.sep + 'share' + os.sep + package
+        file_path = share_path + name
+        if os.path.isfile(file_path):
+            return share_path
+
+    package_dir = simple_find(package)
+
+    file_path = package_dir + os.sep + name
+    if os.path.isfile(file_path):
+        return package_dir
+
+    raise ParsingException('package {} with file {} not found'.format(package, name))
 
 def optenv(value):
     words = value.split(' ')
@@ -77,8 +99,7 @@ class Substitutor(object):
         else:
             self.args = args
 
-        self.actions = {'find': find,
-                        'arg': self.arg,
+        self.actions = {'arg': self.arg,
                         'dirname': self.dirname_func,
                         'env': env,
                         'optenv': optenv,
@@ -87,6 +108,7 @@ class Substitutor(object):
     def eval_text(self, text):
         locals = dict(self.args)
         locals.update(self.actions)
+        locals['find'] = simple_find
         locals['pi'] = math.pi
         locals['true'] = True
         locals['false'] = False
@@ -124,6 +146,14 @@ class Substitutor(object):
                     replacement = self.eval_text(value)
                 else:
                     raise ParsingException('$(eval) expressions need to span the whole attribute string!')
+            elif keyword == 'find':
+                if len(text) > end and text[end] == '/':
+                    end_postfix = end + 1
+                    while not (len(text) == end_postfix or text[end_postfix] == ' '):
+                        end_postfix += 1
+                    replacement = find(value, text[end+1:end_postfix])
+                else:
+                    replacement = simple_find(value)
             elif keyword in self.actions:
                 replacement = self.actions[keyword](value)
             else:
@@ -184,13 +214,18 @@ class Substitutor(object):
 
 class Launch(object):
 
-    def __init__(self, root, sub, ns=None):
+    def __init__(self, root=None, sub=None, ns=None):
         self.nodes = {}
         self.launches = []
         self.params = {}
         self.remaps = {}
         self.envs = {}
         self.ns = ns
+
+        if root is None:
+            root = {}
+        if sub is None:
+            sub = Substitutor('')
 
         if 'ns' in root.keys():
             group_ns = sub.substitute_element_value(root, 'ns')
@@ -281,17 +316,8 @@ class Launch(object):
                 else:
                     ns = self.ns + '/' + ns
 
-                if ns is not None:
-                    if ns[0] != '/':
-                        ns = '/' + ns
-
-                    full_name = ns + '/' + node_name
-
-                else:
-                    full_name = node_name
-
-                    if full_name[0] != '/':
-                        full_name = '/' + full_name
+                if ns is not None and ns[0] != '/':
+                    ns = '/' + ns
 
                 for sub_element in element:
                     if sub_element.tag == 'remap':
@@ -303,9 +329,8 @@ class Launch(object):
                         elif isinstance(param, dict):
                             self.params.update(param)
 
-                if full_name in self.nodes:
-                    raise ParsingException('Node name is not unique: {}'.format(full_name))
-                self.nodes[full_name] = Node(package_name, executable, node_name, ns=ns, remaps=remaps, envs=dict(self.envs), extra_args=extra_args, respawn=respawn, respawn_delay=respawn_delay, required=required, clear_params=clear_params, working_directory=working_directory, launch_prefix=launch_prefix)
+                node = Node(package_name, executable, node_name, ns=ns, remaps=remaps, envs=dict(self.envs), extra_args=extra_args, respawn=respawn, respawn_delay=respawn_delay, required=required, clear_params=clear_params, working_directory=working_directory, launch_prefix=launch_prefix)
+                self.add_node(node)
             elif element.tag == 'test':
                 raise ParsingException('test tag is not supported!')
             elif element.tag == 'machine':
@@ -384,11 +409,17 @@ class Launch(object):
 
     @staticmethod
     def find_launch(package_name, launch_filename):
-        package_path = find(package_name)
+        package_path = simple_find(package_name)
         launch_path = os.path.join(package_path, 'launch', launch_filename)
         if not os.path.isfile(launch_path):
              launch_path = os.path.join(package_path, launch_filename)
         return launch_path
+
+    def add_node(self, node):
+        full_name = node.full_name
+        if full_name in self.nodes:
+            raise ParsingException('Node name is not unique: {}'.format(full_name))
+        self.nodes[full_name] = node
 
     def add_launch(self, sub_launch):
         self.launches.append(sub_launch)

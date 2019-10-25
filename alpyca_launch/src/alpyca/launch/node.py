@@ -47,6 +47,14 @@ class Node(object):
         else:
             self.launch_prefix = launch_prefix
 
+        if ns is not None:
+            self.full_name = ns + '/' + node_name
+        else:
+            self.full_name = node_name
+
+            if self.full_name[0] != '/':
+                self.full_name = '/' + self.full_name
+
     def start(self):
         self.running = True
 

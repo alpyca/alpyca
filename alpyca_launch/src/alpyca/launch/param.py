@@ -154,11 +154,15 @@ class Param(object):
                 with open(path, 'rb') as file:
                     value = file.read()
             elif exists('command'):
-                cmd = element.get('command').split(' ')
+                str_cmd = sub.substitute_element_value(element, 'command', force_type=str)
+                cmd = str_cmd.split(' ')
                 try:
                     value = subprocess.check_output(cmd)
                 except subprocess.CalledProcessError:
-                    raise ParsingException('Unknown command {}!'.format(cmd))
+                    raise ParsingException('Unknown command {}!'.format(str_cmd))
+                except Exception as error:
+                    print(str_cmd)
+                    raise error
             else:
                 raise ParsingException('The tags value, textfile or command are missin in param!')
             return cls(name, value)

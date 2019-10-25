@@ -104,7 +104,7 @@ class TestParam(unittest.TestCase):
     <param name="test" textfile="$(find alpyca_launch)/test/textfile_does_not_exist.txt" />
 </launch>"""
 
-        with self.assertRaises(IOError):
+        with self.assertRaises(ParsingException):
             launch = Launch.from_string(string)
 
     def test_param_binfile(self):
