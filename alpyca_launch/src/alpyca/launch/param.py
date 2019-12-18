@@ -2,6 +2,7 @@
 #!/usr/bin/env python
 from __future__ import division, absolute_import, print_function
 
+import rospy
 import subprocess
 import yaml
 import re
@@ -154,18 +155,19 @@ class Param(object):
                 with open(path, 'rb') as file:
                     value = file.read()
             elif exists('command'):
-                str_cmd = sub.substitute_element_value(element, 'command', force_type=str)
-                cmd = str_cmd.split(' ')
+                cmd = sub.substitute_element_value(element, 'command', force_type=str)
                 try:
-                    value = subprocess.check_output(cmd)
+                    #cmd_list = [elem for elem in cmd.split(' ') if elem != '']
+                    value = subprocess.check_output(cmd, shell=True)
                 except subprocess.CalledProcessError:
-                    raise ParsingException('Unknown command {}!'.format(str_cmd))
+                    raise ParsingException('Unknown command {}!'.format(cmd))
                 except Exception as error:
-                    print(str_cmd)
+                    print(cmd)
                     raise error
             else:
                 raise ParsingException('The tags value, textfile or command are missin in param!')
             return cls(name, value)
 
     def start(self):
-        subprocess.check_output(['rosparam', 'set', self.name, str(self.value)])
+
+        rospy.set_param(self.name, str(self.value))

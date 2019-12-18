@@ -27,26 +27,37 @@ def simple_find(package):
     except subprocess.CalledProcessError:
         raise ParsingException('Unknown package ' + package)
 
+def find_in_directory(directory, name):
+    for (dirpath, _, filenames) in os.walk(directory):
+        path = dirpath + os.sep + name
+        if os.path.isfile(path):
+            dir_path = path[:-len(name)-1]
+            return dir_path
+
 def find(package, name):
+    # Use simple_find if there is another substitution argument in the filename.
+    if '$(' in name:
+        return simple_find(package)
+
     env_cmake = os.environ['CMAKE_PREFIX_PATH'].split(':')
     catkin_workspaces = [path for path in env_cmake if os.path.isfile(path + os.sep + '.catkin')]
 
     for workspace in catkin_workspaces:
-        exec_path = workspace + os.sep + 'lib' + os.sep + package
-        file_path = exec_path + name
-        if os.path.isfile(file_path):
-            return exec_path
-        
-        share_path = workspace + os.sep + 'share' + os.sep + package
-        file_path = share_path + name
-        if os.path.isfile(file_path):
-            return share_path
+        for search_folder in ['lib', 'share']:
+            package_path = workspace + os.sep + search_folder + os.sep + package
+            path = find_in_directory(package_path, name)
+            if path is not None:
+                return path
 
     package_dir = simple_find(package)
 
     file_path = package_dir + os.sep + name
     if os.path.isfile(file_path):
         return package_dir
+
+    path = find_in_directory(package_dir, name)
+    if path is not None:
+        return path
 
     raise ParsingException('package {} with file {} not found'.format(package, name))
 
@@ -123,8 +134,8 @@ class Substitutor(object):
     def dirname_func(self, _):
         return self.dirname
 
-    def find_action(self, text):
-        expr = r'\$\((.*?)\)'
+    def find_eval_action(self, text):
+        expr = r'\$\(eval (.*?)\)'
 
         matches = []
         for re_match in re.finditer(expr, text):
@@ -135,26 +146,64 @@ class Substitutor(object):
             keyword = words[0]
             value = ' '.join(words[1:])
 
-            if keyword == 'eval':
-                # As a limitation, $(eval) expressions need to span the whole attribute string.
-                # A mixture of other substitution args with eval within a single string is not possible.
-                if text.startswith('$(eval') and text.endswith(')'):
-                    end = len(text)
-                    words = text[start+2:end-1].split(' ')
-                    keyword = words[0]
-                    value = ' '.join(words[1:])
-                    replacement = self.eval_text(value)
-                else:
-                    raise ParsingException('$(eval) expressions need to span the whole attribute string!')
-            elif keyword == 'find':
-                if len(text) > end and text[end] == '/':
-                    end_postfix = end + 1
-                    while not (len(text) == end_postfix or text[end_postfix] == ' '):
-                        end_postfix += 1
-                    replacement = find(value, text[end+1:end_postfix])
-                else:
-                    replacement = simple_find(value)
-            elif keyword in self.actions:
+            # As a limitation, $(eval) expressions need to span the whole attribute string.
+            # A mixture of other substitution args with eval within a single string is not possible.
+            if text.startswith('$(eval') and text.endswith(')'):
+                end = len(text)
+                words = text[start+2:end-1].split(' ')
+                keyword = words[0]
+                value = ' '.join(words[1:])
+                replacement = self.eval_text(value)
+            else:
+                raise ParsingException('$(eval) expressions need to span the whole attribute string!')
+
+            match = Match(start, end, keyword, value, replacement)
+            matches.append(match)
+        
+        return matches
+
+    def find_find_action(self, text):
+        expr = r'\$\(find (.*?)\)'
+
+        matches = []
+        for re_match in re.finditer(expr, text):
+            start = re_match.start()
+            end = re_match.end()
+
+            words = text[start+2:end-1].split(' ')
+            keyword = words[0]
+            value = ' '.join(words[1:])
+
+            if len(text) > end and text[end] == '/':
+                end_postfix = end + 1
+                while not (len(text) == end_postfix or text[end_postfix] in [' ', '\'', '\"']):
+                    end_postfix += 1
+                replacement = find(value, text[end+1:end_postfix])
+            else:
+                replacement = simple_find(value)
+            match = Match(start, end, keyword, value, replacement)
+            matches.append(match)
+        
+        return matches
+
+    def find_action(self, text, action):
+        if action == 'eval':
+            return self.find_eval_action(text)
+        elif action == 'find':
+            return self.find_find_action(text)
+
+        expr = r'\$\(' + action + '(.*?)\)'
+
+        matches = []
+        for re_match in re.finditer(expr, text):
+            start = re_match.start()
+            end = re_match.end()
+
+            words = text[start+2:end-1].split(' ')
+            keyword = words[0]
+            value = ' '.join(words[1:])
+
+            if keyword in self.actions:
                 replacement = self.actions[keyword](value)
             else:
                 raise ParsingException('Unknown keyword {}!'.format(keyword))
@@ -163,9 +212,19 @@ class Substitutor(object):
         
         return matches
 
+    def find_unknown_action(self, text):
+        expr = r'\$\((.*?)\)'
+
+        matches = []
+        for re_match in re.finditer(expr, text):
+            raise ParsingException('TODO')
+
     def substitute_arg(self, text, force_type=None):
-        matches = self.find_action(text)
-        sub_text = Substitutor.replace(text, matches)
+        for action in ['arg', 'dirname', 'env', 'optenv', 'anon', 'find', 'eval']:
+            matches = self.find_action(text, action)
+            text = Substitutor.replace(text, matches)
+        sub_text = text
+        self.find_unknown_action(sub_text)
 
         if force_type is None:
             if sub_text.lower() == 'true':
@@ -189,7 +248,7 @@ class Substitutor(object):
         arg = element.get(value)
         if arg is None:
             raise ParsingException('Missing value {}'.format(value))
-        return self.substitute_arg(element.get(value), force_type=force_type)
+        return self.substitute_arg(element.get(value).encode('unicode_escape'), force_type=force_type)
 
     @staticmethod
     def replace(text, matches):
@@ -328,7 +387,6 @@ class Launch(object):
                             self.params[param.name] = param
                         elif isinstance(param, dict):
                             self.params.update(param)
-
                 node = Node(package_name, executable, node_name, ns=ns, remaps=remaps, envs=dict(self.envs), extra_args=extra_args, respawn=respawn, respawn_delay=respawn_delay, required=required, clear_params=clear_params, working_directory=working_directory, launch_prefix=launch_prefix)
                 self.add_node(node)
             elif element.tag == 'test':

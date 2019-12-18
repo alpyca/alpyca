@@ -3,6 +3,7 @@
 from __future__ import division, absolute_import, print_function
 
 import os
+import time
 from subprocess import Popen, check_output
 
 
@@ -10,11 +11,13 @@ __all__ = ['Node']
 
 class Node(object):
 
-    def __init__(self, package_name, executable, node_name, ns=None, params=None, remaps=None, envs=None, extra_args=None, respawn=False, respawn_delay=0.0, required=False, clear_params=False, working_directory=None, launch_prefix=None):
+    def __init__(self, package_name, executable, node_name, ns=None, params=None, remaps=None, envs=None, extra_args=None, respawn=False, respawn_delay=1.0, required=False, clear_params=False, working_directory=None, launch_prefix=None):
         self.package_name = package_name
         self.executable = executable
         self.node_name = node_name
         self.ns = ns
+
+        self.running = False
 
         if params is None:
             self.params = {}
@@ -26,13 +29,20 @@ class Node(object):
         else:
             self.remaps = remaps
 
+        self.remaps_list = []
+        self.params_list = []
+        for key, value in self.remaps.items():
+            self.remaps_list.append(key + ':=' + value)
+        for key, value in self.params.items():
+            self.params_list.append('_' + key.replace('~', '') + ':=' + value)
+
         if envs is None:
             self.envs = {}
         else:
             self.envs = envs
 
         if extra_args is None:
-            self.extra_args = {}
+            self.extra_args = []
         else:
             self.extra_args = extra_args
 
@@ -55,37 +65,44 @@ class Node(object):
             if self.full_name[0] != '/':
                 self.full_name = '/' + self.full_name
 
-    def start(self):
+        self.env = os.environ.copy()
+        self.env.update(self.envs)
+
+    def _run_process(self):
+        base_cmd = ['rosrun', self.package_name, self.executable, '__name:=' + self.node_name]
+        if self.ns is not None:
+            base_cmd.append('__ns:=' + self.ns)
+
+        cmd = self.launch_prefix + base_cmd + self.remaps_list + self.params_list + self.extra_args
+
+        self.process = Popen(cmd, env=self.env, cwd=self.working_directory)
         self.running = True
+        return_code = self.process.wait()
+        print('Node {} finished with return code {}'.format(self.full_name, return_code))
+        if self.running and self.required:
+            raise RuntimeError('Required node {} died!'.format(self.node_name))
 
-        if self.ns is None:
-            full_name = self.node_name
-        else:
-            full_name = self.ns + '/' + self.node_name
-        
+    def start(self):
+        print('Started node {}'.format(self.full_name))
+
         if self.clear_params:
-            check_output(['rosparam', 'delete', full_name])
+            check_output(['rosparam', 'delete', self.full_name])
 
-        remaps_list = []
-        params_list = []
-        for key, value in self.remaps.items():
-            remaps_list.append(key + ':=' + value)
-        for key, value in self.params.items():
-            params_list.append('_' + key.replace('~', '') + ':=' + value)
-
-        env = os.environ.copy()
-        env.update(self.envs)
         if self.respawn:
-            while running:
-                self.process = Popen(self.launch_prefix + ['rosrun', self.package_name, self.executable, '__name:=' + full_name] + remaps_list + params_list, env=env, cwd=self.working_directory)
+            while self.running:
+                self._run_process()
                 time.sleep(self.respawn_delay)
         else:
-            self.process = Popen(self.launch_prefix + ['rosrun', self.package_name, self.executable, '__name:=' + full_name] + remaps_list + params_list, env=env, cwd=self.working_directory)
-            if self.running and self.required:
-                raise RuntimeError('Required node {} died!'.format(self.node_name))
+            self._run_process()
+
     def stop(self):
+        if self.running:
+            try:
+                self.process.terminate()
+            except OSError:
+                # Process has already finished
+                pass
         self.running = False
-        self.process.terminate()
 
     def __del__(self):
-        self.process.terminate()
+        self.stop()

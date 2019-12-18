@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from __future__ import division, absolute_import, print_function
 
+import thread
+
 import rospy
 from alpyca_launch.msg import State, NodeState
 from alpyca_launch.srv import StartStop, StartStopRequest, StartStopResponse
@@ -28,12 +30,12 @@ class Runner(object):
         self.nodes = {}
         launch.append_nodes(self.nodes)
 
-        for node in self.nodes.values():
-            node.start()
         for param in launch.get_all_params().values():
             param.start()
+        for node in self.nodes.values():
+            thread.start_new_thread(node.start, ())
 
-        rospy.init_node('alpyca_launch')
+        rospy.init_node('alpyca_runner')
         pub = rospy.Publisher('launch_topic', State, queue_size=5)
         start_stop_service = rospy.Service('start_stop', StartStop, self.start_stop)
 
