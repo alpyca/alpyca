@@ -4,9 +4,14 @@ compiler:
 language: python
 services:
   - docker
+env:
+  global:
+    - CATKIN_PARALLEL_JOBS='-p1'
+    - ROS_PARALLEL_JOBS='-j1'
 matrix:
   include:
-    - env: USE_DEB=true ROS_DISTRO=kinetic BEFORE_SCRIPT='sh .ci_config/dependencies.sh'
+    - env: UPSTREAM_WORKSPACE=debian ROS_DISTRO=kinetic BEFORE_SCRIPT='sh .ci_config/dependencies.sh'
+    - env: UPSTREAM_WORKSPACE=debian ROS_DISTRO=melodic BEFORE_SCRIPT='sh .ci_config/dependencies.sh'
 install:
   - git clone --quiet --depth 1 https://github.com/ros-industrial/industrial_ci.git .industrial_ci
 script:
