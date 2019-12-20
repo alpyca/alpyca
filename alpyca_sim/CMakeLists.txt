@@ -6,11 +6,11 @@ find_package(PythonLibs REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   gazebo_ros
   roscpp
+  pybind11_catkin
 )
 
 catkin_python_setup()
 
-find_package(pybind11)
 find_package(gazebo REQUIRED)
 find_package(PythonLibs REQUIRED)
 
@@ -22,14 +22,15 @@ set(bindings_includes "${bindings}/includes")
 file(MAKE_DIRECTORY ${bindings})
 file(MAKE_DIRECTORY ${bindings_includes})
 
-link_directories(${GAZEBO_LIBRARY_DIRS})
-include_directories(include ${bindings_includes} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-
 catkin_package(
+  LIBRARIES
   CATKIN_DEPENDS
     gazebo_ros
-  LIBRARIES ${PROJECT_NAME} pybind11
+    pybind11_catkin
 )
+
+link_directories(${GAZEBO_LIBRARY_DIRS})
+include_directories(include ${bindings_includes} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 
 set(pybind_msgs "${CMAKE_CURRENT_BINARY_DIR}/proto/msgs.cpp")
 add_custom_command(
@@ -51,19 +52,6 @@ add_custom_command(
       ${GAZEBO_INCLUDE_DIRS_COMMA_SEPARATED}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-macro(pybind_add_module target_name other)
-    pybind11_add_module(${ARGV})
-    target_link_libraries(${target_name} PRIVATE ${PYTHON_LIBRARIES} ${catkin_LIBRARIES})
-    set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_GLOBAL_PYTHON_DESTINATION})
-    set(PYTHON_LIB_DIR ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
-    add_custom_command(TARGET ${target_name}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_LIB_DIR}
-      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target_name}> ${PYTHON_LIB_DIR}/${target_name}.so
-      WORKING_DIRECTORY ${CATKIN_DEVEL_PREFIX}
-  COMMENT "Copying library files to python directory")
-endmacro(pybind_add_module)
 
 pybind_add_module(sensors MODULE ${bindings_sensors})
 pybind_add_module(msgs MODULE ${pybind_msgs})
