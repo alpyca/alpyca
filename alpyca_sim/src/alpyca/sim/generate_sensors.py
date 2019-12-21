@@ -27,9 +27,8 @@ def get_args():
                         help='Output pybind11 bindings.')
     parser.add_argument('wrapper_dir', type=str,
                         help='Output directory for wrapper files.')
-    parser.add_argument('gazebo_include_dirs', type=str,
-                        help='Include directories of gazebo. The directories should comma seperated.'
-                             'These directories are searched for the header files, for which bindings should be created.')
+    parser.add_argument('gazebo_include_dir', type=str,
+                        help='Include directory of gazebo. This directories is searched for the header files, for which bindings should be created.')
     args = parser.parse_args()
     return args
 
@@ -105,7 +104,7 @@ def filter_sensors(sensors):
 
 def read_sensors(gazebo_dir, wrapper_dir):
     possible_sensors = []
-    sensors_dir = os.path.join(gazebo_dir, 'sensors')
+    sensors_dir = os.path.join(gazebo_dir, 'gazebo', 'sensors')
     for sensor_path in os.listdir(sensors_dir):
         if not sensor_path.endswith('.hh'):
             continue
@@ -152,8 +151,7 @@ def create_bindings(sensors, template_dir, sensor_binding_path):
 
 def main():
     args = get_args()
-    gazebo_dir = find_gazebo(args.gazebo_include_dirs)
-    sensors = read_sensors(gazebo_dir, args.wrapper_dir)
+    sensors = read_sensors(args.gazebo_include_dir, args.wrapper_dir)
     create_bindings(sensors, args.template_dir, args.sensor_binding_path)
 
 

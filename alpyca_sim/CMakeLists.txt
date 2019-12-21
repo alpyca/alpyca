@@ -33,14 +33,23 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 include_directories(include ${bindings_includes} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
 
 set(pybind_msgs "${CMAKE_CURRENT_BINARY_DIR}/proto/msgs.cpp")
+
+# Search for the gazebo include directory, e.g.: /usr/include/gazebo-7
+foreach(INCLUDE_DIR ${GAZEBO_INCLUDE_DIRS})
+  if(IS_DIRECTORY ${INCLUDE_DIR}/gazebo/sensors)
+    set(gazebo_include_dir ${INCLUDE_DIR})
+  endif()
+endforeach()
+
+if(NOT DEFINED gazebo_include_dir)
+  message(FATAL_ERROR "Could not find Gazebo include directory!" )
+endif()
+
 add_custom_command(
     OUTPUT ${pybind_msgs}
-    COMMAND python build/pybind/proto_to_pybind11.py /usr/include/gazebo-7/gazebo/msgs/proto ${pybind_msgs}
+    COMMAND python build/pybind/proto_to_pybind11.py ${gazebo_include_dir}/gazebo/msgs/proto ${pybind_msgs}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-# Replace semicolon with comma, because a semicolon is interpreted as end of line
-string(REPLACE ";" "," GAZEBO_INCLUDE_DIRS_COMMA_SEPARATED "${GAZEBO_INCLUDE_DIRS}")
 
 set(bindings_sensors "${bindings}/sensors.cpp")
 add_custom_command(
@@ -49,7 +58,7 @@ add_custom_command(
       ${CMAKE_CURRENT_SOURCE_DIR}/src/alpyca/sim
       ${bindings_sensors}
       ${bindings_includes}
-      ${GAZEBO_INCLUDE_DIRS_COMMA_SEPARATED}
+      ${gazebo_include_dir}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
