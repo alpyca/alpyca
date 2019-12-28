@@ -4,7 +4,13 @@ from __future__ import division, absolute_import, print_function
 
 import os
 import time
-from subprocess import Popen, check_output
+from subprocess import Popen, check_output, PIPE
+from threading  import Thread
+
+try:
+    from queue import Queue, Empty
+except ImportError:
+    from Queue import Queue, Empty  # python 2.x
 
 
 __all__ = ['Node']
@@ -68,14 +74,21 @@ class Node(object):
         self.env = os.environ.copy()
         self.env.update(self.envs)
 
+        self.process = None
+
     def _run_process(self):
-        base_cmd = ['rosrun', self.package_name, self.executable, '__name:=' + self.node_name]
+        # The output stream is line buffered with "stdbuf -o L"
+        base_cmd = ['stdbuf', '-o', 'L', 'rosrun', self.package_name, self.executable, '__name:=' + self.node_name]
         if self.ns is not None:
             base_cmd.append('__ns:=' + self.ns)
 
         cmd = self.launch_prefix + base_cmd + self.remaps_list + self.params_list + self.extra_args
 
-        self.process = Popen(cmd, env=self.env, cwd=self.working_directory)
+        self.process = Popen(cmd, env=self.env, cwd=self.working_directory, stdout=PIPE, stderr=PIPE)
+        self.queue = Queue()
+        self.output_thread = Thread(target=self._enqueue_output, args=(self.process.stdout, self.queue))
+        self.output_thread.start()
+
         self.running = True
         return_code = self.process.wait()
         print('Node {} finished with return code {}'.format(self.full_name, return_code))
@@ -106,3 +119,17 @@ class Node(object):
 
     def __del__(self):
         self.stop()
+
+    def _enqueue_output(self, out, queue):
+        for line in iter(out.readline, b''):
+            queue.put(line)
+        out.close()
+
+    def print_output(self):
+        if self.process is not None:
+            while True:
+                try:  line = self.queue.get_nowait()
+                except Empty:
+                    return
+                else:
+                    print(self.full_name + ': \t' + line, end='')

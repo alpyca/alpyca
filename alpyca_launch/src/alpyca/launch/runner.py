@@ -43,6 +43,7 @@ class Runner(object):
         while not rospy.is_shutdown():
             nodes = []
             for node_name, node in self.nodes.items():
+                node.print_output()
                 node_state = NodeState()
                 node_state.name = node_name
                 nodes.append(node_state)
